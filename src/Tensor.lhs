@@ -6,15 +6,16 @@ other/header.md
 If language was given to men to conceal their thoughts, then gesture's purpose was to disclose then. ~ John Napier
 </blockquote>
 
-tensor
+repo: [naperian](https://github.com/tonyday567/naperian).
+
+[naperian tensors](https://github.com/tonyday567/naperian)
 ===
 
-The code below is an attempt to define Tensors (n-dimensional arrays) using Representable Functors.
+The code below is an attempt to define Tensors (n-dimensional arrays) using Representable Functors. Representable functors are the [dual](https://www.reddit.com/r/haskell/comments/2y25ly/language_deriveapplicative/) of traversable ones, and are also known as [Naperian](https://www.reddit.com/r/haskell/comments/2ckmvb/can_anyone_give_any_references_on/) functors, named after the [ghost](http://stackoverflow.com/questions/12963733/writing-cojoin-or-cobind-for-n-dimensional-grid-type) of John Napier.
 
 A Representable instance for Tensors provides a separation of concerns; between keeping track of functor shape, which happens at the type level; and value-level computation, which can be better optimised free of shape concern.
 
 But type-level coding is hard, and especially hard in Haskell.  Being able to extract a slice of a tensor using an index list is an essential step for generalising many concepts such as inner product and matrix multiplication, but calculation of the resultant tensor shape is beyond the type-fu of this author.
-
 
 [ghc options](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/flags.html#flag-reference)
 ---
