@@ -1,0 +1,230 @@
+<meta charset="utf-8"> <link rel="stylesheet" href="other/lhs.css">
+<script type="text/javascript" async
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML">
+</script>
+<blockquote cite>
+If language was given to men to conceal their thoughts, then gesture's purpose was to disclose then. ~ John Napier
+</blockquote>
+<h1 id="tensor">tensor</h1>
+<p>The code below is an attempt to define Tensors (n-dimensional arrays) using Representable Functors.</p>
+<h2 id="ghc-options"><a href="https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/flags.html#flag-reference">ghc options</a></h2>
+<div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="ot">{-# OPTIONS_GHC -Wall #-}</span>
+<span class="ot">{-# OPTIONS_GHC -fno-warn-type-defaults #-}</span></code></pre></div>
+<h2 id="pragmas"><a href="https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/lang.html">pragmas</a></h2>
+<p>Hands up who thinks pragmas are getting out of hand and a productivity drain.</p>
+<div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="co">-- doctest doesn&#39;t look at the cabal file, so you need pragmas here</span>
+<span class="ot">{-# LANGUAGE NoImplicitPrelude #-}</span>
+<span class="ot">{-# LANGUAGE OverloadedStrings #-}</span>
+<span class="ot">{-# LANGUAGE ScopedTypeVariables #-}</span>
+<span class="ot">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span>
+<span class="ot">{-# LANGUAGE TypeOperators #-}</span>
+<span class="ot">{-# LANGUAGE FlexibleInstances #-}</span>
+<span class="ot">{-# LANGUAGE FlexibleContexts #-}</span>
+<span class="ot">{-# LANGUAGE DataKinds #-}</span>
+<span class="ot">{-# LANGUAGE TypeInType #-}</span>
+<span class="ot">{-# LANGUAGE OverloadedLists #-}</span>
+<span class="ot">{-# LANGUAGE TypeFamilies #-}</span>
+<span class="ot">{-# LANGUAGE DeriveFunctor #-}</span>
+<span class="ot">{-# LANGUAGE DeriveFoldable #-}</span></code></pre></div>
+<h2 id="libraries"><a href="https://www.stackage.org/">libraries</a></h2>
+<ul class="incremental">
+<li><a href="https://www.stackage.org/package/doctest">doctest</a></li>
+<li><a href="https://www.stackage.org/package/protolude">protolude</a></li>
+<li><a href="https://www.stackage.org/package/singletons">singletons</a></li>
+<li><a href="https://www.stackage.org/package/vector">vector</a></li>
+<li><a href="https://www.stackage.org/haddock/lts-8.12/base-4.9.1.0/GHC-TypeLits.html">GHC.Typelits</a></li>
+<li><a href="https://www.stackage.org/haddock/lts-8.12/base-4.9.1.0/GHC-Exts.html">GHC.Exts</a></li>
+<li><a href="https://www.stackage.org/package/adjunctions">adjunctions</a></li>
+<li><a href="https://www.stackage.org/package/distributive">distributive</a></li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="kw">module</span> <span class="dt">Tensor</span> <span class="kw">where</span>
+
+<span class="kw">import </span><span class="dt">Data.Distributive</span>
+<span class="kw">import </span><span class="dt">Data.Functor.Rep</span>
+<span class="kw">import </span><span class="dt">Data.List</span> ((!!))
+<span class="kw">import </span><span class="dt">Data.Singletons</span>
+<span class="kw">import </span><span class="dt">Data.Singletons.Prelude</span>
+<span class="kw">import </span><span class="dt">GHC.Exts</span>
+<span class="kw">import </span><span class="dt">GHC.Show</span>
+<span class="kw">import </span><span class="dt">GHC.TypeLits</span>
+<span class="kw">import </span><span class="dt">Protolude</span> <span class="kw">hiding</span> (show, (&lt;.&gt;))
+<span class="kw">import qualified</span> <span class="dt">Data.Vector</span> <span class="kw">as</span> <span class="dt">V</span></code></pre></div>
+<h2 id="code">code</h2>
+<ul class="incremental">
+<li><a href="https://www.stackage.org/package/hoogle">hoogle</a></li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="co">-- $setup</span>
+<span class="co">-- &gt;&gt;&gt; :set -XDataKinds</span>
+<span class="co">-- &gt;&gt;&gt; :set -XOverloadedLists</span>
+<span class="co">-- &gt;&gt;&gt; :set -XTypeFamilies</span>
+<span class="co">-- &gt;&gt;&gt; let a = [1..24] :: Tensor &#39;[2,3,4] Int</span>
+
+<span class="co">-- | an n-dimensional array where shape is specified at the type level</span>
+<span class="co">-- The main purpose of this, beyond safe typing, is to supply the Representable instance with an initial object.</span>
+<span class="co">-- A single Boxed &#39;Data.Vector.Vector&#39; is used underneath for efficient slicing, but this may change or become polymorphic in the future.</span>
+<span class="co">-- &gt;&gt;&gt; a</span>
+<span class="co">-- [[[1, 2, 3, 4],</span>
+<span class="co">--   [5, 6, 7, 8],</span>
+<span class="co">--   [9, 10, 11, 12]],</span>
+<span class="co">--  [[13, 14, 15, 16],</span>
+<span class="co">--   [17, 18, 19, 20],</span>
+<span class="co">--   [21, 22, 23, 24]]]</span>
+<span class="kw">newtype</span> <span class="dt">Tensor</span> (<span class="ot">r::</span>[<span class="dt">Nat</span>]) a <span class="fu">=</span> <span class="dt">Tensor</span> {<span class="ot"> flattenTensor ::</span> <span class="dt">V.Vector</span> a }
+    <span class="kw">deriving</span> (<span class="dt">Functor</span>, <span class="dt">Eq</span>, <span class="dt">Foldable</span>)</code></pre></div>
+<p>Haskell lacks the category theory concept of an initial object at the value level. You can't look inside a Functor to discover it's shape, so you must make a Representable Functor by attaching shape information at the type level.</p>
+<p>What haskell also lacks is a pleasant experience when coding at the type level. Whenever type-level trickery is not needed, I downgrade to a represnetation with shape specified at the value level.</p>
+<div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell">
+<span class="co">-- | an n-dimensional array where shape is specified at the value level</span>
+<span class="co">-- &gt;&gt;&gt; let b = someTensor a</span>
+<span class="co">-- &gt;&gt;&gt; :t b</span>
+<span class="co">-- b :: SomeTensor Int</span>
+
+<span class="kw">data</span> <span class="dt">SomeTensor</span> a <span class="fu">=</span> <span class="dt">SomeTensor</span> [<span class="dt">Int</span>] (<span class="dt">V.Vector</span> a)
+    <span class="kw">deriving</span> (<span class="dt">Functor</span>, <span class="dt">Eq</span>, <span class="dt">Foldable</span>)
+
+<span class="co">-- | convert a &#39;Tensor&#39; to a &#39;SomeTensor&#39;, losing the type level shape</span>
+<span class="ot">someTensor ::</span> (<span class="dt">SingI</span> r) <span class="ot">=&gt;</span> <span class="dt">Tensor</span> (<span class="ot">r::</span>[<span class="dt">Nat</span>]) a <span class="ot">-&gt;</span> <span class="dt">SomeTensor</span> a
+someTensor n <span class="fu">=</span> <span class="dt">SomeTensor</span> (shape n) (flattenTensor n)
+
+<span class="co">-- | extracts shape from the type level</span>
+<span class="co">-- &gt;&gt;&gt; shape a</span>
+<span class="co">-- [2,3,4]</span>
+<span class="ot">shape ::</span> forall (<span class="ot">r::</span>[<span class="dt">Nat</span>]) a<span class="fu">.</span> (<span class="dt">SingI</span> r) <span class="ot">=&gt;</span> <span class="dt">Tensor</span> r a <span class="ot">-&gt;</span> [<span class="dt">Int</span>]
+shape _ <span class="fu">=</span> <span class="kw">case</span> (<span class="ot">sing ::</span> <span class="dt">Sing</span> r) <span class="kw">of</span>
+            <span class="dt">SNil</span> <span class="ot">-&gt;</span> []
+            (<span class="dt">SCons</span> x xs) <span class="ot">-&gt;</span> fromIntegral <span class="fu">&lt;$&gt;</span> (fromSing x<span class="fu">:</span> fromSing xs)
+
+<span class="co">-- | convert from n-dim shape index to a flat index</span>
+<span class="co">-- &gt;&gt;&gt; ind [2,3,4] [1,1,1]</span>
+<span class="co">-- 17</span>
+<span class="ot">ind ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">Int</span>
+ind ns xs <span class="fu">=</span> sum <span class="fu">$</span> zipWith (<span class="fu">*</span>) xs (drop <span class="dv">1</span> <span class="fu">$</span> scanr (<span class="fu">*</span>) <span class="dv">1</span> ns)
+
+<span class="ot">unfoldI ::</span> forall t<span class="fu">.</span> <span class="dt">Integral</span> t <span class="ot">=&gt;</span> [t] <span class="ot">-&gt;</span> t <span class="ot">-&gt;</span> ([t], t)
+unfoldI ns x <span class="fu">=</span>
+    foldr
+    (\a (acc, r) <span class="ot">-&gt;</span> <span class="kw">let</span> (d,m) <span class="fu">=</span> divMod r a <span class="kw">in</span> (m<span class="fu">:</span>acc,d))
+    ([],x)
+    ns
+
+<span class="co">-- | convert from a flat index to a shape index</span>
+<span class="co">-- &gt;&gt;&gt; unind [2,3,4] 17</span>
+<span class="co">-- [1,1,1]</span>
+<span class="ot">unind ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> [<span class="dt">Int</span>]
+unind ns x<span class="fu">=</span> fst <span class="fu">$</span> unfoldI ns x
+
+<span class="kw">instance</span> forall r<span class="fu">.</span> (<span class="dt">SingI</span> r) <span class="ot">=&gt;</span> <span class="dt">Distributive</span> (<span class="dt">Tensor</span> (<span class="ot">r::</span>[<span class="dt">Nat</span>])) <span class="kw">where</span>
+    distribute f <span class="fu">=</span> <span class="dt">Tensor</span> <span class="fu">$</span> V.generate n
+        <span class="fu">$</span> \i <span class="ot">-&gt;</span> fmap (\(<span class="dt">Tensor</span> v) <span class="ot">-&gt;</span> V.unsafeIndex v i) f
+      <span class="kw">where</span>
+        n <span class="fu">=</span> <span class="kw">case</span> (<span class="ot">sing ::</span> <span class="dt">Sing</span> r) <span class="kw">of</span>
+          <span class="dt">SNil</span> <span class="ot">-&gt;</span> <span class="dv">1</span>
+          (<span class="dt">SCons</span> x xs) <span class="ot">-&gt;</span> product <span class="fu">$</span> fromInteger <span class="fu">&lt;$&gt;</span> (fromSing x<span class="fu">:</span> fromSing xs)
+
+<span class="kw">instance</span> forall (<span class="ot">r ::</span> [<span class="dt">Nat</span>])<span class="fu">.</span> (<span class="dt">SingI</span> r) <span class="ot">=&gt;</span> <span class="dt">Representable</span> (<span class="dt">Tensor</span> r) <span class="kw">where</span>
+    <span class="kw">type</span> <span class="dt">Rep</span> (<span class="dt">Tensor</span> r) <span class="fu">=</span> [<span class="dt">Int</span>]
+    tabulate f <span class="fu">=</span> <span class="dt">Tensor</span> <span class="fu">$</span> V.generate (product ns) (f <span class="fu">.</span> unind ns)
+      <span class="kw">where</span>
+        ns <span class="fu">=</span> <span class="kw">case</span> (<span class="ot">sing ::</span> <span class="dt">Sing</span> r) <span class="kw">of</span>
+          <span class="dt">SNil</span> <span class="ot">-&gt;</span> []
+          (<span class="dt">SCons</span> x xs) <span class="ot">-&gt;</span> fromIntegral <span class="fu">&lt;$&gt;</span> (fromSing x<span class="fu">:</span> fromSing xs)
+    index (<span class="dt">Tensor</span> xs) rs <span class="fu">=</span> xs <span class="fu">V.!</span> ind ns rs
+      <span class="kw">where</span>
+        ns <span class="fu">=</span> <span class="kw">case</span> (<span class="ot">sing ::</span> <span class="dt">Sing</span> r) <span class="kw">of</span>
+          <span class="dt">SNil</span> <span class="ot">-&gt;</span> []
+          (<span class="dt">SCons</span> x xs&#39;) <span class="ot">-&gt;</span> fromIntegral <span class="fu">&lt;$&gt;</span> (fromSing x<span class="fu">:</span> fromSing xs&#39;)
+
+<span class="co">-- | from flat list</span>
+<span class="kw">instance</span> (<span class="dt">SingI</span> r, <span class="dt">Num</span> a) <span class="ot">=&gt;</span> <span class="dt">IsList</span> (<span class="dt">Tensor</span> (<span class="ot">r::</span>[<span class="dt">Nat</span>]) a) <span class="kw">where</span>
+    <span class="kw">type</span> <span class="dt">Item</span> (<span class="dt">Tensor</span> r a) <span class="fu">=</span> a
+    fromList l <span class="fu">=</span> <span class="dt">Tensor</span> <span class="fu">$</span> V.fromList <span class="fu">$</span> take n <span class="fu">$</span> l <span class="fu">++</span> repeat <span class="dv">0</span>
+      <span class="kw">where</span>
+        n <span class="fu">=</span> <span class="kw">case</span> (<span class="ot">sing ::</span> <span class="dt">Sing</span> r) <span class="kw">of</span>
+          <span class="dt">SNil</span> <span class="ot">-&gt;</span> <span class="dv">1</span>
+          (<span class="dt">SCons</span> x xs&#39;) <span class="ot">-&gt;</span> product <span class="fu">$</span> fromIntegral <span class="fu">&lt;$&gt;</span> (fromSing x<span class="fu">:</span> fromSing xs&#39;)
+    toList (<span class="dt">Tensor</span> v) <span class="fu">=</span> V.toList v
+
+<span class="kw">instance</span> (<span class="dt">Show</span> a) <span class="ot">=&gt;</span> <span class="dt">Show</span> (<span class="dt">SomeTensor</span> a) <span class="kw">where</span>
+    show r<span class="fu">@</span>(<span class="dt">SomeTensor</span> l _) <span class="fu">=</span> go (length l) r
+      <span class="kw">where</span>
+        go n r&#39;<span class="fu">@</span>(<span class="dt">SomeTensor</span> l&#39; v&#39;) <span class="fu">=</span> <span class="kw">case</span> length l&#39; <span class="kw">of</span>
+          <span class="dv">0</span> <span class="ot">-&gt;</span> show <span class="fu">$</span> V.head v&#39;
+          <span class="dv">1</span> <span class="ot">-&gt;</span> <span class="st">&quot;[&quot;</span> <span class="fu">++</span> intercalate <span class="st">&quot;, &quot;</span> (show <span class="fu">&lt;$&gt;</span> GHC.Exts.toList v&#39;) <span class="fu">++</span> <span class="st">&quot;]&quot;</span>
+          x <span class="ot">-&gt;</span> 
+              <span class="st">&quot;[&quot;</span> <span class="fu">++</span>
+              intercalate
+              (<span class="st">&quot;,\n&quot;</span> <span class="fu">++</span> replicate (n<span class="fu">-</span>x<span class="fu">+</span><span class="dv">1</span>) <span class="ch">&#39; &#39;</span>)
+              (go n <span class="fu">&lt;$&gt;</span> flatten1 r&#39;) <span class="fu">++</span>
+              <span class="st">&quot;]&quot;</span>
+
+<span class="co">-- | convert the top layer of a SomeTensor to a [SomeTensor]</span>
+<span class="ot">flatten1 ::</span> <span class="dt">SomeTensor</span> a <span class="ot">-&gt;</span> [<span class="dt">SomeTensor</span> a]
+flatten1 (<span class="dt">SomeTensor</span> rep v) <span class="fu">=</span> (\s <span class="ot">-&gt;</span> <span class="dt">SomeTensor</span> (drop <span class="dv">1</span> rep) (V.unsafeSlice (s<span class="fu">*</span>l) l v)) <span class="fu">&lt;$&gt;</span> ss
+    <span class="kw">where</span>
+      n <span class="fu">=</span> fromMaybe <span class="dv">0</span> <span class="fu">$</span> head rep
+      ss <span class="fu">=</span> take n [<span class="dv">0</span><span class="fu">..</span>]
+      l <span class="fu">=</span> product <span class="fu">$</span> drop <span class="dv">1</span> rep
+
+<span class="kw">instance</span> (<span class="dt">Show</span> a, <span class="dt">SingI</span> r) <span class="ot">=&gt;</span> <span class="dt">Show</span> (<span class="dt">Tensor</span> (<span class="ot">r::</span>[<span class="dt">Nat</span>]) a) <span class="kw">where</span>
+    show <span class="fu">=</span> show <span class="fu">.</span> someTensor
+
+<span class="co">-- ** Operations</span>
+
+<span class="co">-- | inner product</span>
+<span class="co">-- &gt;&gt;&gt; let v = [1,2,3] :: Tensor &#39;[3] Int</span>
+<span class="co">-- &gt;&gt;&gt; v &lt;.&gt; v</span>
+<span class="co">-- 14</span>
+<span class="ot">(&lt;.&gt;) ::</span> (<span class="dt">Num</span> a, <span class="dt">Foldable</span> m, <span class="dt">Representable</span> m) <span class="ot">=&gt;</span> m a <span class="ot">-&gt;</span> m a <span class="ot">-&gt;</span> a
+(<span class="fu">&lt;.&gt;</span>) a b <span class="fu">=</span> sum <span class="fu">$</span> liftR2 (<span class="fu">*</span>) a b</code></pre></div>
+<p>around here, ghc and myself start to diverge. The outer product below works in ghci but fails the doctest.</p>
+<div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="co">-- | outer product</span>
+<span class="co">-- &gt;&gt;&gt; v &gt;&lt; v</span>
+<span class="co">-- [[1,2,3],</span>
+<span class="co">--  [2,4,6],</span>
+<span class="co">--  [3,6,9]]</span>
+<span class="ot">(&gt;&lt;) ::</span> forall (<span class="ot">r::</span>[<span class="dt">Nat</span>]) (<span class="ot">s::</span>[<span class="dt">Nat</span>]) a<span class="fu">.</span> (<span class="dt">Num</span> a, <span class="dt">SingI</span> r, <span class="dt">SingI</span> s, <span class="dt">SingI</span> (r <span class="fu">:++</span> s)) <span class="ot">=&gt;</span> <span class="dt">Tensor</span> r a <span class="ot">-&gt;</span> <span class="dt">Tensor</span> s a <span class="ot">-&gt;</span> <span class="dt">Tensor</span> (r <span class="fu">:++</span> s) a
+(<span class="fu">&gt;&lt;</span>) m n <span class="fu">=</span> tabulate (\i <span class="ot">-&gt;</span> index m (take dimm i) <span class="fu">*</span> index n (drop dimm i))
+  <span class="kw">where</span>
+    dimm <span class="fu">=</span> length (shape m)</code></pre></div>
+<p>The representable instance allows the classical definition of matrix multiplication. But here I had to switch to KnownNat constraints, and ditch the SingI ones I had been using. To generalise this to an n-tensor requires a switch back.</p>
+<div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="co">-- | matrix multiplication for a &#39;2-Tensor&#39;</span>
+<span class="ot">mmult ::</span> forall m n k a<span class="fu">.</span> (<span class="dt">Num</span> a, <span class="dt">KnownNat</span> m, <span class="dt">KnownNat</span> n, <span class="dt">KnownNat</span> k) <span class="ot">=&gt;</span>
+    <span class="dt">Tensor</span> <span class="ch">&#39;[m,k] a -&gt;</span>
+    <span class="dt">Tensor</span> <span class="ch">&#39;[k,n] a -&gt;</span>
+    <span class="dt">Tensor</span> <span class="ch">&#39;[m,n] a</span>
+mmult x y <span class="fu">=</span> tabulate (\[i,j] <span class="ot">-&gt;</span> col i x <span class="fu">&lt;.&gt;</span> row j y)
+
+<span class="co">-- | extract the first dimension (aka the row) from a &#39;2-Tensor&#39; as a &#39;1-Tensor&#39;</span>
+<span class="ot">row ::</span> forall a m n<span class="fu">.</span> (<span class="dt">KnownNat</span> m, <span class="dt">KnownNat</span> n) <span class="ot">=&gt;</span>
+    <span class="dt">Int</span> <span class="ot">-&gt;</span>
+    <span class="dt">Tensor</span> <span class="ch">&#39;[m,n] a -&gt;</span>
+    <span class="dt">Tensor</span> <span class="ch">&#39;[m] a</span>
+row i t<span class="fu">@</span>(<span class="dt">Tensor</span> a) <span class="fu">=</span> <span class="dt">Tensor</span> <span class="fu">$</span> V.unsafeSlice (i<span class="fu">*</span>m) n a
+  <span class="kw">where</span>
+    [m,n] <span class="fu">=</span> shape t
+
+<span class="co">-- | extract the second dimension (aka the col) from a &#39;2-Tensor&#39; as a &#39;1-Tensor&#39;</span>
+<span class="ot">col ::</span> forall a m n<span class="fu">.</span> (<span class="dt">KnownNat</span> m, <span class="dt">KnownNat</span> n) <span class="ot">=&gt;</span>
+    <span class="dt">Int</span> <span class="ot">-&gt;</span>
+    <span class="dt">Tensor</span> <span class="ch">&#39;[m,n] a -&gt;</span>
+    <span class="dt">Tensor</span> <span class="ch">&#39;[n] a</span>
+col i t<span class="fu">@</span>(<span class="dt">Tensor</span> a) <span class="fu">=</span> <span class="dt">Tensor</span> <span class="fu">$</span> V.generate m (\x <span class="ot">-&gt;</span> a <span class="fu">V.!</span> (i<span class="fu">+</span>x<span class="fu">*</span>n))
+  <span class="kw">where</span>
+    [m,n] <span class="fu">=</span> shape t</code></pre></div>
+<p>This is the key to making it all work, and where by type-fu runs out.</p>
+<p>The doctest below only works because the new shape of the resultant tensor is supplied.</p>
+<p>The value-level calculation is easy:</p>
+<pre><code>vslice :: [[Nat]] -&gt; [Nat]
+vslice xs = fromIntegral . length &lt;$&gt; xs</code></pre>
+<p>But how do you do this computation at the type level?</p>
+<div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="co">-- | take a slice of a Tensor</span>
+<span class="co">-- &gt;&gt;&gt;  slice [[0,1],[2],[1,2]] a :: Tensor &#39;[2,1,2] Int</span>
+<span class="co">-- [[[10, 11]],</span>
+<span class="co">--  [[22, 23]]]</span>
+<span class="ot">slice ::</span> forall a r s<span class="fu">.</span> (<span class="dt">SingI</span> r, <span class="dt">SingI</span> s) <span class="ot">=&gt;</span>
+    [[<span class="dt">Int</span>]] <span class="ot">-&gt;</span> <span class="dt">Tensor</span> (<span class="ot">r::</span>[<span class="dt">Nat</span>]) a <span class="ot">-&gt;</span> <span class="dt">Tensor</span> (<span class="ot">s::</span>[<span class="dt">Nat</span>]) a
+slice xs f <span class="fu">=</span> tabulate <span class="fu">$</span> \xs&#39; <span class="ot">-&gt;</span> index f (zipWith (<span class="fu">!!</span>) xs xs&#39;)</code></pre></div>
+<hr />
+<div class="footer">
+<p>Powered by <a href="https://haskell-lang.org/">haskell</a>, <a href="https://docs.haskellstack.org/en/stable/README/">stack</a> and <a href="http://pandoc.org/">pandoc</a>.</p>
+</div>
