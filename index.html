@@ -28,7 +28,10 @@ If language was given to men to conceal their thoughts, then gesture's purpose w
 <span class="ot">{-# LANGUAGE OverloadedLists #-}</span>
 <span class="ot">{-# LANGUAGE TypeFamilies #-}</span>
 <span class="ot">{-# LANGUAGE DeriveFunctor #-}</span>
-<span class="ot">{-# LANGUAGE DeriveFoldable #-}</span></code></pre></div>
+<span class="ot">{-# LANGUAGE DeriveFoldable #-}</span>
+<span class="ot">{-# LANGUAGE TemplateHaskell #-}</span>
+<span class="ot">{-# LANGUAGE GADTs #-}</span>
+<span class="ot">{-# LANGUAGE UndecidableInstances #-}</span></code></pre></div>
 <h2 id="libraries"><a href="https://www.stackage.org/">libraries</a></h2>
 <ul class="incremental">
 <li><a href="https://www.stackage.org/package/doctest">doctest</a></li>
@@ -47,9 +50,12 @@ If language was given to men to conceal their thoughts, then gesture's purpose w
 <span class="kw">import </span><span class="dt">Data.List</span> ((!!))
 <span class="kw">import </span><span class="dt">Data.Singletons</span>
 <span class="kw">import </span><span class="dt">Data.Singletons.Prelude</span>
+<span class="kw">import </span><span class="dt">Data.Singletons.TH</span> (promote)
+<span class="kw">import </span><span class="dt">Data.Singletons.Prelude.List</span>
+<span class="kw">import </span><span class="dt">Data.Singletons.TypeLits</span>
 <span class="kw">import </span><span class="dt">GHC.Exts</span>
 <span class="kw">import </span><span class="dt">GHC.Show</span>
-<span class="kw">import </span><span class="dt">GHC.TypeLits</span>
+<span class="co">-- import GHC.TypeLits</span>
 <span class="kw">import </span><span class="dt">Protolude</span> <span class="kw">hiding</span> (show, (&lt;.&gt;))
 <span class="kw">import qualified</span> <span class="dt">Data.Vector</span> <span class="kw">as</span> <span class="dt">V</span></code></pre></div>
 <h2 id="code">code</h2>
@@ -182,6 +188,14 @@ flatten1 (<span class="dt">SomeTensor</span> rep v) <span class="fu">=</span> (\
 <p>around here, ghc and myself start to diverge. The outer product below works in ghci but fails the doctest.</p>
 <div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="co">-- | outer product</span>
 <span class="co">-- &gt;&gt;&gt; v &gt;&lt; v</span>
+<span class="co">-- ...</span>
+<span class="co">-- ... Couldn&#39;t match type ‘r0 :++ s0’ with ‘r :++ s’</span>
+<span class="co">-- ... Expected type: Tensor (r :++ s) a</span>
+<span class="co">-- ... Actual type: Tensor (r0 :++ s0) a</span>
+<span class="co">-- ... NB: ‘:++’ is a type function, and may not be injective</span>
+<span class="co">-- ... The type variables ‘r0’, ‘s0’ are ambiguous</span>
+<span class="co">-- ...</span>
+
 <span class="co">-- [[1,2,3],</span>
 <span class="co">--  [2,4,6],</span>
 <span class="co">--  [3,6,9]]</span>
@@ -227,6 +241,36 @@ vslice xs = fromIntegral . length &lt;$&gt; xs</code></pre>
 <span class="ot">slice ::</span> forall a r s<span class="fu">.</span> (<span class="dt">SingI</span> r, <span class="dt">SingI</span> s) <span class="ot">=&gt;</span>
     [[<span class="dt">Int</span>]] <span class="ot">-&gt;</span> <span class="dt">Tensor</span> (<span class="ot">r::</span>[<span class="dt">Nat</span>]) a <span class="ot">-&gt;</span> <span class="dt">Tensor</span> (<span class="ot">s::</span>[<span class="dt">Nat</span>]) a
 slice xs f <span class="fu">=</span> tabulate <span class="fu">$</span> \xs&#39; <span class="ot">-&gt;</span> index f (zipWith (<span class="fu">!!</span>) xs xs&#39;)</code></pre></div>
+<p>type-level slice function</p>
+<div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell">
+<span class="fu">$</span>(promote
+      [d|
+  -- tSlice :: [[a]] -&gt; [Int]
+  tSlice xs = map length xs
+  |])
+
+
+<span class="co">-- | the only way I could think of to be able to talk about x in the type signature of tslice</span>
+<span class="ot">prox ::</span> forall x<span class="fu">.</span> (<span class="dt">SingI</span> x) <span class="ot">=&gt;</span> [[<span class="dt">Int</span>]] <span class="ot">-&gt;</span> <span class="dt">Proxy</span> (<span class="ot">x::</span>[[<span class="dt">Nat</span>]])
+prox _ <span class="fu">=</span> <span class="dt">Proxy</span><span class="ot">::</span><span class="dt">Proxy</span> x
+
+<span class="co">-- | take a slice of a Tensor</span>
+<span class="co">-- &gt;&gt;&gt; :set -XFlexibleContexts</span>
+<span class="co">-- &gt;&gt;&gt; :set -XAllowAmbiguousTypes</span>
+<span class="co">-- &gt;&gt;&gt;  tslice [[0,1],[2],[1,2]] (prox [[0,1],[2],[1,2]]) a</span>
+<span class="co">-- ...</span>
+<span class="co">-- ... Couldn&#39;t match type ‘Data.Singletons.Prelude.List.Map</span>
+<span class="co">-- ... LengthSym0 x0’</span>
+<span class="co">-- ... with ‘Data.Singletons.Prelude.List.Map LengthSym0 x’</span>
+<span class="co">-- ... Expected type: Tensor (MapSym2 LengthSym0 x) Int</span>
+<span class="co">-- ... Actual type: Tensor (TSlice x0) Int</span>
+<span class="co">-- ... NB: ‘Data.Singletons.Prelude.List.Map’ is a type function, and may not be injective</span>
+<span class="co">-- ... The type variable ‘x0’ is ambiguous</span>
+<span class="co">-- ...</span>
+
+<span class="ot">tslice ::</span> forall a (<span class="ot">r::</span>[<span class="dt">Nat</span>]) (<span class="ot">x::</span>[[<span class="dt">Nat</span>]])<span class="fu">.</span> (<span class="dt">SingI</span> r, <span class="dt">SingI</span> x, <span class="dt">SingI</span> (<span class="dt">TSlice</span> x)) <span class="ot">=&gt;</span>
+    [[<span class="dt">Int</span>]] <span class="ot">-&gt;</span> <span class="dt">Proxy</span> (<span class="ot">x::</span>[[<span class="dt">Nat</span>]]) <span class="ot">-&gt;</span> <span class="dt">Tensor</span> (<span class="ot">r::</span>[<span class="dt">Nat</span>]) a <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ((<span class="dt">TSlice</span> x)<span class="ot">::</span>[<span class="dt">Nat</span>]) a
+tslice xs _ f <span class="fu">=</span> tabulate <span class="fu">$</span> \xs&#39; <span class="ot">-&gt;</span> index f (zipWith (<span class="fu">!!</span>) xs xs&#39;)</code></pre></div>
 <hr />
 <div class="footer">
 <p>Powered by <a href="https://haskell-lang.org/">haskell</a>, <a href="https://docs.haskellstack.org/en/stable/README/">stack</a> and <a href="http://pandoc.org/">pandoc</a>.</p>

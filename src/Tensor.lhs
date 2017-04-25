@@ -45,6 +45,9 @@ Hands up who thinks pragmas are getting out of hand and a productivity drain.
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE UndecidableInstances #-}
 \end{code}
 
 [libraries](https://www.stackage.org/)
@@ -67,9 +70,12 @@ import Data.Functor.Rep
 import Data.List ((!!))
 import Data.Singletons
 import Data.Singletons.Prelude
+import Data.Singletons.TH (promote)
+import Data.Singletons.Prelude.List
+import Data.Singletons.TypeLits
 import GHC.Exts
 import GHC.Show
-import GHC.TypeLits
+-- import GHC.TypeLits
 import Protolude hiding (show, (<.>))
 import qualified Data.Vector as V
 
@@ -217,6 +223,14 @@ around here, ghc and myself start to diverge.  The outer product below works in 
 \begin{code}
 -- | outer product
 -- >>> v >< v
+-- ...
+-- ... Couldn't match type ‘r0 :++ s0’ with ‘r :++ s’
+-- ... Expected type: Tensor (r :++ s) a
+-- ... Actual type: Tensor (r0 :++ s0) a
+-- ... NB: ‘:++’ is a type function, and may not be injective
+-- ... The type variables ‘r0’, ‘s0’ are ambiguous
+-- ...
+
 -- [[1,2,3],
 --  [2,4,6],
 --  [3,6,9]]
@@ -278,6 +292,43 @@ slice :: forall a r s. (SingI r, SingI s) =>
     [[Int]] -> Tensor (r::[Nat]) a -> Tensor (s::[Nat]) a
 slice xs f = tabulate $ \xs' -> index f (zipWith (!!) xs xs')
 \end{code}
+
+type-level slice function
+
+\begin{code}
+
+$(promote
+      [d|
+  -- tSlice :: [[a]] -> [Int]
+  tSlice xs = map length xs
+  |])
+
+
+-- | the only way I could think of to be able to talk about x in the type signature of tslice
+prox :: forall x. (SingI x) => [[Int]] -> Proxy (x::[[Nat]])
+prox _ = Proxy::Proxy x
+
+-- | take a slice of a Tensor
+-- >>> :set -XFlexibleContexts
+-- >>> :set -XAllowAmbiguousTypes
+-- >>>  tslice [[0,1],[2],[1,2]] (prox [[0,1],[2],[1,2]]) a
+-- ...
+-- ... Couldn't match type ‘Data.Singletons.Prelude.List.Map
+-- ... LengthSym0 x0’
+-- ... with ‘Data.Singletons.Prelude.List.Map LengthSym0 x’
+-- ... Expected type: Tensor (MapSym2 LengthSym0 x) Int
+-- ... Actual type: Tensor (TSlice x0) Int
+-- ... NB: ‘Data.Singletons.Prelude.List.Map’ is a type function, and may not be injective
+-- ... The type variable ‘x0’ is ambiguous
+-- ...
+
+tslice :: forall a (r::[Nat]) (x::[[Nat]]). (SingI r, SingI x, SingI (TSlice x)) =>
+    [[Int]] -> Proxy (x::[[Nat]]) -> Tensor (r::[Nat]) a -> Tensor ((TSlice x)::[Nat]) a
+tslice xs _ f = tabulate $ \xs' -> index f (zipWith (!!) xs xs')
+
+\end{code}
+
+
 
 ***
 
