@@ -8,7 +8,7 @@ import Test.DocTest
 
 main :: IO ()
 main = do
-    doctest ["src/Tensor.lhs"]
+    doctest ["src/Tensor.lhs", "src/Slicer.lhs"]
     defaultMain tests
 
 tests :: TestTree

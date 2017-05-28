@@ -103,17 +103,17 @@ body ul li:after {
 
 .sourceCode {
     background-color: #f0f0f0;
-    color: #3d323d;
-    font-family: "lucida console", "9x15", "DejaVu Sans Mono", "Monaco";
+    color: #3a4855;
+    font-family: "DejaVu Sans Mono", "lucida console", "9x15", "Monaco";
     font-size: 1em;
 }
-.sourceCode .ot { color: #3d323d; }
-.sourceCode .kw { color: #3d323d; }
-.sourceCode .dt { color: #ab1f27; }
-.sourceCode .dv { color: #2536d6; }
-.sourceCode .st { color: #2536d6; }
+.sourceCode .ot { color: #3a4855; }
+.sourceCode .kw { color: #3a4855; }
+.sourceCode .dt { color: #2e5a87; }
+.sourceCode .dv { color: #6fb23f; }
+.sourceCode .st { color: #6fb23f; }
 .sourceCode .co {
   color: #808080;
   font-style: italic;
 }
-.sourceCode .fu { color: #e347e4; }
+.sourceCode .fu { color: #e17701; }

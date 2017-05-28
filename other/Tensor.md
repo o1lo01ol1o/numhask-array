@@ -1,23 +1,38 @@
-The code below is an attempt to define Tensors (n-dimensional arrays) using Representable Functors. Representable functors are the [dual](https://www.reddit.com/r/haskell/comments/2y25ly/language_deriveapplicative/) of traversable ones, and are also known as [Naperian](https://www.reddit.com/r/haskell/comments/2ckmvb/can_anyone_give_any_references_on/) functors, named after the [ghost](http://stackoverflow.com/questions/12963733/writing-cojoin-or-cobind-for-n-dimensional-grid-type) of John Napier.
+The code below is an attempt to define Tensors (n-dimensional arrays)
+using Representable Functors. Representable functors are the
+[dual](https://www.reddit.com/r/haskell/comments/2y25ly/language_deriveapplicative/)
+of traversable ones, and are also known as
+[Naperian](https://www.reddit.com/r/haskell/comments/2ckmvb/can_anyone_give_any_references_on/)
+functors, named after the
+[ghost](http://stackoverflow.com/questions/12963733/writing-cojoin-or-cobind-for-n-dimensional-grid-type)
+of John Napier.
 
-A Representable instance for Tensors provides a separation of concerns; between keeping track of functor shape, which happens at the type level; and value-level computation, which can be better optimised free of shape concern.
+A Representable instance for Tensors provides a separation of concerns;
+between keeping track of functor shape, which happens at the type level;
+and value-level computation, which can be better optimised free of shape
+concern.
 
-But type-level coding is hard, and especially hard in Haskell.  Being able to extract a slice of a tensor using an index list is an essential step for generalising many concepts such as inner product and matrix multiplication, but calculation of the resultant tensor shape is beyond the type-fu of this author.
+But type-level coding is hard, and especially hard in Haskell. Being
+able to extract a slice of a tensor using an index list is an essential
+step for generalising many concepts such as inner product and matrix
+multiplication, but calculation of the resultant tensor shape is beyond
+the type-fu of this author.
 
 [ghc options](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/flags.html#flag-reference)
----
+--------------------------------------------------------------------------------------------------------
 
-\begin{code}
+``` {.sourceCode .literate .haskell}
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
-\end{code}
+```
 
 [pragmas](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/lang.html)
----
+------------------------------------------------------------------------------------
 
-Hands up who thinks pragmas are getting out of hand and a productivity drain.
+Hands up who thinks pragmas are getting out of hand and a productivity
+drain.
 
-\begin{code}
+``` {.sourceCode .literate .haskell}
 -- doctest doesn't look at the cabal file, so you need pragmas here
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -34,21 +49,21 @@ Hands up who thinks pragmas are getting out of hand and a productivity drain.
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE UndecidableInstances #-}
-\end{code}
+```
 
 [libraries](https://www.stackage.org/)
----
+--------------------------------------
 
-- [doctest](https://www.stackage.org/package/doctest)
-- [protolude](https://www.stackage.org/package/protolude)
-- [singletons](https://www.stackage.org/package/singletons)
-- [vector](https://www.stackage.org/package/vector)
-- [GHC.Typelits](https://www.stackage.org/haddock/lts-8.12/base-4.9.1.0/GHC-TypeLits.html)
-- [GHC.Exts](https://www.stackage.org/haddock/lts-8.12/base-4.9.1.0/GHC-Exts.html)
-- [adjunctions](https://www.stackage.org/package/adjunctions)
-- [distributive](https://www.stackage.org/package/distributive)
+-   [doctest](https://www.stackage.org/package/doctest)
+-   [protolude](https://www.stackage.org/package/protolude)
+-   [singletons](https://www.stackage.org/package/singletons)
+-   [vector](https://www.stackage.org/package/vector)
+-   [GHC.Typelits](https://www.stackage.org/haddock/lts-8.12/base-4.9.1.0/GHC-TypeLits.html)
+-   [GHC.Exts](https://www.stackage.org/haddock/lts-8.12/base-4.9.1.0/GHC-Exts.html)
+-   [adjunctions](https://www.stackage.org/package/adjunctions)
+-   [distributive](https://www.stackage.org/package/distributive)
 
-\begin{code}
+``` {.sourceCode .literate .haskell}
 module Tensor where
 
 import Data.Distributive
@@ -62,15 +77,14 @@ import GHC.Show
 -- import GHC.TypeLits
 import Protolude hiding (show, (<.>))
 import qualified Data.Vector as V
-
-\end{code}
+```
 
 code
----
+----
 
-- [hoogle](https://www.stackage.org/package/hoogle)
+-   [hoogle](https://www.stackage.org/package/hoogle)
 
-\begin{code}
+``` {.sourceCode .literate .haskell}
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XOverloadedLists
@@ -89,14 +103,18 @@ code
 --   [21, 22, 23, 24]]]
 newtype Tensor (r::[Nat]) a = Tensor { flattenTensor :: V.Vector a }
     deriving (Functor, Eq, Foldable)
+```
 
-\end{code}
+Haskell lacks the category theory concept of an initial object at the
+value level. You can't look inside a Functor to discover it's shape, so
+you must make a Representable Functor by attaching shape information at
+the type level.
 
-Haskell lacks the category theory concept of an initial object at the value level.  You can't look inside a Functor to discover it's shape, so you must make a Representable Functor by attaching shape information at the type level.
+What haskell also lacks is a pleasant experience when coding at the type
+level. Whenever type-level trickery is not needed, I downgrade to a
+represnetation with shape specified at the value level.
 
-What haskell also lacks is a pleasant experience when coding at the type level. Whenever type-level trickery is not needed, I downgrade to a represnetation with shape specified at the value level.
-
-\begin{code}
+``` {.sourceCode .literate .haskell}
 
 -- | an n-dimensional array where shape is specified at the value level
 -- >>> let b = someTensor a
@@ -200,11 +218,12 @@ instance (Show a, SingI r) => Show (Tensor (r::[Nat]) a) where
 -- 14
 (<.>) :: (Num a, Foldable m, Representable m) => m a -> m a -> a
 (<.>) a b = sum $ liftR2 (*) a b
-\end{code}
+```
 
-around here, ghc and myself start to diverge.  The outer product below works in ghci but fails the doctest.
+around here, ghc and myself start to diverge. The outer product below
+works in ghci but fails the doctest.
 
-\begin{code}
+``` {.sourceCode .literate .haskell}
 -- | outer product
 -- >>> v >< v
 -- ...
@@ -222,11 +241,14 @@ around here, ghc and myself start to diverge.  The outer product below works in 
 (><) m n = tabulate (\i -> index m (take dimm i) * index n (drop dimm i))
   where
     dimm = length (shape m)
-\end{code}
+```
 
-The representable instance allows the classical definition of matrix multiplication. But here I had to switch to KnownNat constraints, and ditch the SingI ones I had been using.  To generalise this to an n-tensor requires a switch back.
+The representable instance allows the classical definition of matrix
+multiplication. But here I had to switch to KnownNat constraints, and
+ditch the SingI ones I had been using. To generalise this to an n-tensor
+requires a switch back.
 
-\begin{code}
+``` {.sourceCode .literate .haskell}
 -- | matrix multiplication for a '2-Tensor'
 mmult :: forall m n k a. (Num a, KnownNat m, KnownNat n, KnownNat k) =>
     Tensor '[m,k] a ->
@@ -251,23 +273,21 @@ col :: forall a m n. (KnownNat m, KnownNat n) =>
 col i t@(Tensor a) = Tensor $ V.generate m (\x -> a V.! (i+x*n))
   where
     [m,n] = shape t
-
-\end{code}
+```
 
 This is the key to making it all work, and where by type-fu runs out.
 
-The doctest below only works because the new shape of the resultant tensor is supplied.
+The doctest below only works because the new shape of the resultant
+tensor is supplied.
 
 The value-level calculation is easy:
 
-~~~
-vslice :: [[Nat]] -> [Nat]
-vslice xs = fromIntegral . length <$> xs
-~~~
+    vslice :: [[Nat]] -> [Nat]
+    vslice xs = fromIntegral . length <$> xs
 
 But how do you do this computation at the type level?
 
-\begin{code}
+``` {.sourceCode .literate .haskell}
 -- | take a slice of a Tensor
 -- >>>  vslice [[0,1],[2],[1,2]] a :: Tensor '[2,1,2] Int
 -- [[[10, 11]],
@@ -275,5 +295,4 @@ But how do you do this computation at the type level?
 vslice :: forall a r s. (SingI r, SingI s) =>
     [[Int]] -> Tensor (r::[Nat]) a -> Tensor (s::[Nat]) a
 vslice xs f = tabulate $ \xs' -> index f (zipWith (!!) xs xs')
-\end{code}
-
+```

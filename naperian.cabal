@@ -37,14 +37,17 @@ library
   hs-source-dirs:      
     src
   exposed-modules:
-    Tensor
+    Tensor,
+    Slicer
   build-depends:
     base >= 4.7 && < 5,
     protolude,
     vector,
     singletons,
     adjunctions,
-    distributive
+    distributive,
+    typelits-witnesses,
+    ghc-typelits-natnormalise
   default-extensions:
     NoImplicitPrelude,
     UnicodeSyntax,
@@ -76,6 +79,7 @@ library
     RecursiveDo,
     ScopedTypeVariables,
     TupleSections,
+    -- TypeApplications,
     TypeFamilies,
     TypeOperators
 
@@ -128,6 +132,7 @@ test-suite test
     RecursiveDo,
     ScopedTypeVariables,
     TupleSections,
+    TypeApplications,
     TypeFamilies,
     TypeOperators
 

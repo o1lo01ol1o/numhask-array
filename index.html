@@ -7,6 +7,7 @@ If language was given to men to conceal their thoughts, then gesture's purpose w
 </blockquote>
 <p>repo: <a href="https://github.com/tonyday567/naperian">naperian</a>.</p>
 <h1 id="naperian-tensors"><a href="https://github.com/tonyday567/naperian">naperian tensors</a></h1>
+<h2 id="tensor">Tensor</h2>
 <p>The code below is an attempt to define Tensors (n-dimensional arrays) using Representable Functors. Representable functors are the <a href="https://www.reddit.com/r/haskell/comments/2y25ly/language_deriveapplicative/">dual</a> of traversable ones, and are also known as <a href="https://www.reddit.com/r/haskell/comments/2ckmvb/can_anyone_give_any_references_on/">Naperian</a> functors, named after the <a href="http://stackoverflow.com/questions/12963733/writing-cojoin-or-cobind-for-n-dimensional-grid-type">ghost</a> of John Napier.</p>
 <p>A Representable instance for Tensors provides a separation of concerns; between keeping track of functor shape, which happens at the type level; and value-level computation, which can be better optimised free of shape concern.</p>
 <p>But type-level coding is hard, and especially hard in Haskell. Being able to extract a slice of a tensor using an index list is an essential step for generalising many concepts such as inner product and matrix multiplication, but calculation of the resultant tensor shape is beyond the type-fu of this author.</p>
@@ -29,7 +30,6 @@ If language was given to men to conceal their thoughts, then gesture's purpose w
 <span class="ot">{-# LANGUAGE TypeFamilies #-}</span>
 <span class="ot">{-# LANGUAGE DeriveFunctor #-}</span>
 <span class="ot">{-# LANGUAGE DeriveFoldable #-}</span>
-<span class="ot">{-# LANGUAGE TemplateHaskell #-}</span>
 <span class="ot">{-# LANGUAGE GADTs #-}</span>
 <span class="ot">{-# LANGUAGE UndecidableInstances #-}</span></code></pre></div>
 <h2 id="libraries"><a href="https://www.stackage.org/">libraries</a></h2>
@@ -50,8 +50,6 @@ If language was given to men to conceal their thoughts, then gesture's purpose w
 <span class="kw">import </span><span class="dt">Data.List</span> ((!!))
 <span class="kw">import </span><span class="dt">Data.Singletons</span>
 <span class="kw">import </span><span class="dt">Data.Singletons.Prelude</span>
-<span class="kw">import </span><span class="dt">Data.Singletons.TH</span> (promote)
-<span class="kw">import </span><span class="dt">Data.Singletons.Prelude.List</span>
 <span class="kw">import </span><span class="dt">Data.Singletons.TypeLits</span>
 <span class="kw">import </span><span class="dt">GHC.Exts</span>
 <span class="kw">import </span><span class="dt">GHC.Show</span>
@@ -235,12 +233,200 @@ col i t<span class="fu">@</span>(<span class="dt">Tensor</span> a) <span class="
 vslice xs = fromIntegral . length &lt;$&gt; xs</code></pre>
 <p>But how do you do this computation at the type level?</p>
 <div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="co">-- | take a slice of a Tensor</span>
-<span class="co">-- &gt;&gt;&gt;  slice [[0,1],[2],[1,2]] a :: Tensor &#39;[2,1,2] Int</span>
+<span class="co">-- &gt;&gt;&gt;  vslice [[0,1],[2],[1,2]] a :: Tensor &#39;[2,1,2] Int</span>
 <span class="co">-- [[[10, 11]],</span>
 <span class="co">--  [[22, 23]]]</span>
-<span class="ot">slice ::</span> forall a r s<span class="fu">.</span> (<span class="dt">SingI</span> r, <span class="dt">SingI</span> s) <span class="ot">=&gt;</span>
+<span class="ot">vslice ::</span> forall a r s<span class="fu">.</span> (<span class="dt">SingI</span> r, <span class="dt">SingI</span> s) <span class="ot">=&gt;</span>
     [[<span class="dt">Int</span>]] <span class="ot">-&gt;</span> <span class="dt">Tensor</span> (<span class="ot">r::</span>[<span class="dt">Nat</span>]) a <span class="ot">-&gt;</span> <span class="dt">Tensor</span> (<span class="ot">s::</span>[<span class="dt">Nat</span>]) a
-slice xs f <span class="fu">=</span> tabulate <span class="fu">$</span> \xs&#39; <span class="ot">-&gt;</span> index f (zipWith (<span class="fu">!!</span>) xs xs&#39;)</code></pre></div>
+vslice xs f <span class="fu">=</span> tabulate <span class="fu">$</span> \xs&#39; <span class="ot">-&gt;</span> index f (zipWith (<span class="fu">!!</span>) xs xs&#39;)</code></pre></div>
+<h2 id="existential-slicer">Existential Slicer</h2>
+<p>Justin</p>
+<p><a href="https://gist.github.com/mstksg/629fda869802463f9c718fddd7d5c0f1">justin</a></p>
+<div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell">
+
+<span class="ot">{-# LANGUAGE NoImplicitPrelude #-}</span>
+<span class="ot">{-# LANGUAGE DataKinds #-}</span>
+<span class="ot">{-# LANGUAGE DeriveFoldable #-}</span>
+<span class="ot">{-# LANGUAGE DeriveFunctor #-}</span>
+<span class="ot">{-# LANGUAGE FlexibleContexts #-}</span>
+<span class="ot">{-# LANGUAGE FlexibleInstances #-}</span>
+<span class="ot">{-# LANGUAGE GADTs #-}</span>
+<span class="ot">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span>
+<span class="ot">{-# LANGUAGE LambdaCase            #-}</span>
+<span class="ot">{-# LANGUAGE MultiParamTypeClasses #-}</span>
+<span class="ot">{-# LANGUAGE OverloadedLists #-}</span>
+<span class="ot">{-# LANGUAGE OverloadedStrings #-}</span>
+<span class="ot">{-# LANGUAGE PolyKinds             #-}</span>
+<span class="ot">{-# LANGUAGE RankNTypes            #-}</span>
+<span class="ot">{-# LANGUAGE ScopedTypeVariables #-}</span>
+<span class="ot">{-# LANGUAGE TypeApplications      #-}</span>
+<span class="ot">{-# LANGUAGE TypeFamilies #-}</span>
+<span class="ot">{-# LANGUAGE TypeInType #-}</span>
+<span class="ot">{-# LANGUAGE TypeOperators #-}</span>
+<span class="ot">{-# LANGUAGE UndecidableInstances #-}</span>
+<span class="ot">{-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise #-}</span>
+
+<span class="kw">module</span> <span class="dt">Slicer</span> <span class="kw">where</span>
+
+<span class="kw">import </span><span class="dt">Data.Functor.Rep</span>
+<span class="kw">import </span><span class="dt">Data.Singletons</span>
+<span class="kw">import </span><span class="dt">Data.Singletons.Prelude</span>
+<span class="kw">import </span><span class="dt">Data.Singletons.TH</span> ((:~:)(..))
+<span class="kw">import </span><span class="dt">Data.Singletons.TypeLits</span>
+<span class="kw">import </span><span class="dt">GHC.TypeLits</span>
+<span class="kw">import </span><span class="dt">GHC.TypeLits.Compare</span>
+<span class="kw">import </span><span class="dt">Data.List</span> ((!!))
+<span class="kw">import </span><span class="dt">Data.Kind</span>
+<span class="kw">import </span><span class="dt">Data.Maybe</span>
+<span class="kw">import </span><span class="dt">Tensor</span>
+<span class="kw">import </span><span class="dt">Protolude</span>
+
+<span class="kw">data</span> <span class="dt">ProdMap</span><span class="ot"> ::</span> (a <span class="ot">-&gt;</span> b <span class="ot">-&gt;</span> <span class="dt">Type</span>) <span class="ot">-&gt;</span> [a] <span class="ot">-&gt;</span> [b] <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span>
+    <span class="dt">PMZ</span><span class="ot"> ::</span> <span class="dt">ProdMap</span> f <span class="ch">&#39;[] &#39;</span>[]
+    <span class="dt">PMS</span><span class="ot"> ::</span> f a b <span class="ot">-&gt;</span> <span class="dt">ProdMap</span> f as bs <span class="ot">-&gt;</span> <span class="dt">ProdMap</span> f (a <span class="ch">&#39;: as) (b &#39;</span><span class="fu">:</span> bs)
+
+<span class="kw">data</span> <span class="dt">Slice</span><span class="ot"> ::</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span>
+    <span class="dt">Slice</span><span class="ot"> ::</span> <span class="dt">Sing</span> l <span class="ot">-&gt;</span> <span class="dt">Sing</span> c <span class="ot">-&gt;</span> <span class="dt">Sing</span> r <span class="ot">-&gt;</span> <span class="dt">Slice</span> (l <span class="fu">+</span> c <span class="fu">+</span> r) c
+
+<span class="ot">unaryOp ::</span>
+    (<span class="dt">SingI</span> ns, <span class="dt">SingI</span> ms) <span class="ot">=&gt;</span>
+    ((<span class="dt">SingI</span> ms) <span class="ot">=&gt;</span> <span class="dt">Tensor</span> ns a <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ms a) <span class="ot">-&gt;</span>
+    <span class="dt">ProdMap</span> <span class="dt">Slice</span> ns ms <span class="ot">-&gt;</span>
+    <span class="dt">Tensor</span> ns a <span class="ot">-&gt;</span>
+    <span class="dt">Tensor</span> ms a
+unaryOp f _ t <span class="fu">=</span> f t
+
+<span class="ot">indexSlice&#39; ::</span> (<span class="dt">SingI</span> ms, <span class="dt">SingI</span> ns) <span class="ot">=&gt;</span> [[<span class="dt">Int</span>]] <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ns a <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ms a
+indexSlice&#39; xs t <span class="fu">=</span> tabulate <span class="fu">$</span> \xs&#39; <span class="ot">-&gt;</span> index t (fromIntegral <span class="fu">&lt;$&gt;</span> zipWith (<span class="fu">!!</span>) xs xs&#39;)
+
+headSlice
+<span class="ot">    ::</span> (<span class="dt">SingI</span> ns, <span class="dt">SingI</span> ms) 
+    <span class="ot">=&gt;</span> <span class="dt">ProdMap</span> <span class="dt">Slice</span> ns ms
+    <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ns a
+    <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ms a
+headSlice _ t <span class="fu">=</span> tabulate <span class="fu">$</span> \xs&#39; <span class="ot">-&gt;</span> index t xs&#39;
+
+indexSlice
+<span class="ot">    ::</span> (<span class="dt">SingI</span> ns, <span class="dt">SingI</span> ms) 
+    <span class="ot">=&gt;</span> <span class="dt">ProdMap</span> <span class="dt">Slice</span> ns ms
+    <span class="ot">-&gt;</span> [[<span class="dt">Integer</span>]]
+    <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ns a
+    <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ms a
+indexSlice _ xs t <span class="fu">=</span> tabulate <span class="fu">$</span> \xs&#39; <span class="ot">-&gt;</span> index t (fromIntegral <span class="fu">&lt;$&gt;</span> zipWith (<span class="fu">!!</span>) xs xs&#39;)
+
+<span class="kw">data</span> <span class="dt">IsLTE</span><span class="ot"> ::</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="dt">Nat</span> <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span>
+    <span class="dt">IsLTE</span><span class="ot"> ::</span> (n <span class="fu">&lt;=</span> m) <span class="ot">=&gt;</span> <span class="dt">Sing</span> n <span class="ot">-&gt;</span> <span class="dt">Sing</span> m <span class="ot">-&gt;</span> <span class="dt">IsLTE</span> n m 
+
+<span class="co">-- given a type-level list `ns` of the number of items from each dimension to take,</span>
+<span class="co">-- returns the `ProdMap Slice ms ns` that encodes that.</span>
+<span class="ot">encode ::</span> forall ms ns<span class="fu">.</span> <span class="dt">ProdMap</span> <span class="dt">IsLTE</span> ns ms <span class="ot">-&gt;</span> <span class="dt">ProdMap</span> <span class="dt">Slice</span> ms ns
+encode <span class="fu">=</span> \<span class="kw">case</span>
+    <span class="dt">PMZ</span> <span class="ot">-&gt;</span> <span class="dt">PMZ</span>
+    <span class="dt">IsLTE</span> sN sM <span class="ot">`PMS`</span> ltes <span class="ot">-&gt;</span>
+      <span class="dt">Slice</span> (<span class="dt">SNat</span> <span class="fu">@</span><span class="dv">0</span>) sN (sM <span class="fu">%:-</span> sN) <span class="ot">`PMS`</span> encode ltes
+
+<span class="kw">data</span> <span class="dt">CurrySing</span><span class="ot"> ::</span> k1 <span class="ot">-&gt;</span> k2 <span class="ot">-&gt;</span> <span class="dt">Type</span> <span class="kw">where</span>
+    <span class="dt">CurrySing</span><span class="ot"> ::</span> <span class="dt">Sing</span> a <span class="ot">-&gt;</span> <span class="dt">Sing</span> b <span class="ot">-&gt;</span> <span class="dt">CurrySing</span> a b
+
+<span class="ot">mkLTE ::</span> <span class="dt">ProdMap</span> <span class="dt">CurrySing</span> ns ms <span class="ot">-&gt;</span> <span class="dt">Maybe</span> (<span class="dt">ProdMap</span> <span class="dt">IsLTE</span> ns ms)
+mkLTE <span class="fu">=</span> \<span class="kw">case</span>
+    <span class="dt">PMZ</span> <span class="ot">-&gt;</span> <span class="dt">Just</span> <span class="dt">PMZ</span>
+    <span class="dt">CurrySing</span> (n<span class="fu">@</span><span class="dt">SNat</span><span class="ot"> ::</span> <span class="dt">Sing</span> n) (m<span class="fu">@</span><span class="dt">SNat</span><span class="ot"> ::</span> <span class="dt">Sing</span> m) <span class="ot">`PMS`</span> pms <span class="ot">-&gt;</span> <span class="kw">case</span> 
+    <span class="co">-- %&lt;=? from http://hackage.haskell.org/package/typelits-witnesses-0.2.3.0/docs/GHC-TypeLits-Compare.html</span>
+     (<span class="dt">Proxy</span> <span class="fu">@</span>n) <span class="fu">%&lt;=?</span> (<span class="dt">Proxy</span> <span class="fu">@</span>m) <span class="kw">of</span>
+       <span class="dt">LE</span> <span class="dt">Refl</span> <span class="ot">-&gt;</span> (<span class="dt">IsLTE</span> n m <span class="ot">`PMS`</span>) <span class="fu">&lt;$&gt;</span> mkLTE pms
+       _       <span class="ot">-&gt;</span> <span class="dt">Nothing</span>
+
+zipSings
+<span class="ot">    ::</span> <span class="dt">Sing</span> as
+    <span class="ot">-&gt;</span> <span class="dt">Sing</span> bs
+    <span class="ot">-&gt;</span> <span class="dt">Maybe</span> (<span class="dt">ProdMap</span> <span class="dt">CurrySing</span> as bs)
+zipSings <span class="fu">=</span> \<span class="kw">case</span>
+    <span class="dt">SNil</span> <span class="ot">-&gt;</span> \<span class="kw">case</span>
+      <span class="dt">SNil</span> <span class="ot">-&gt;</span> <span class="dt">Just</span> <span class="dt">PMZ</span>
+      _ <span class="ot">`SCons`</span> _ <span class="ot">-&gt;</span> <span class="dt">Nothing</span>
+    sA <span class="ot">`SCons`</span> sAs <span class="ot">-&gt;</span> \<span class="kw">case</span>
+      <span class="dt">SNil</span>        <span class="ot">-&gt;</span> <span class="dt">Nothing</span>
+      sB <span class="ot">`SCons`</span> sBs <span class="ot">-&gt;</span>
+        (<span class="dt">CurrySing</span> sA sB <span class="ot">`PMS`</span>) <span class="fu">&lt;$&gt;</span> zipSings sAs sBs
+
+zipSingsUnsafe a b <span class="fu">=</span> fromMaybe <span class="dt">PMZ</span> (zipSings a b)
+
+sliceHeads
+<span class="ot">    ::</span> <span class="dt">SingI</span> ms
+    <span class="ot">=&gt;</span> [<span class="dt">Integer</span>]
+    <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ms a
+    <span class="ot">-&gt;</span> (forall ns<span class="fu">.</span> <span class="dt">SingI</span> ns <span class="ot">=&gt;</span> <span class="dt">Tensor</span> ns a <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">Text</span> r)
+    <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">Text</span> r
+sliceHeads ns t f <span class="fu">=</span> withSomeSing ns <span class="fu">$</span> \nsSing <span class="ot">-&gt;</span>
+                       withSingI nsSing <span class="fu">$</span> <span class="kw">do</span>
+    nsms <span class="ot">&lt;-</span> maybe (<span class="dt">Left</span> <span class="st">&quot;dimensions don&#39;t line up&quot;</span>) <span class="dt">Right</span> <span class="fu">$</span>
+                zipSings nsSing sing
+    lte  <span class="ot">&lt;-</span> maybe (<span class="dt">Left</span> <span class="st">&quot;dimensions out of range&quot;</span>) <span class="dt">Right</span> <span class="fu">$</span>
+                mkLTE nsms
+    f <span class="fu">$</span> headSlice (encode lte) t
+
+slice
+<span class="ot">    ::</span> <span class="dt">SingI</span> ms
+    <span class="ot">=&gt;</span> [[<span class="dt">Integer</span>]]
+    <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ms a
+    <span class="ot">-&gt;</span> (forall ns<span class="fu">.</span> <span class="dt">SingI</span> ns <span class="ot">=&gt;</span> <span class="dt">Tensor</span> ns a <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">Text</span> r)
+    <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">Text</span> r
+slice nss t f <span class="fu">=</span> withSomeSing (fmap (fromIntegral <span class="fu">.</span> length) nss) <span class="fu">$</span> \nsSing <span class="ot">-&gt;</span>
+                       withSingI nsSing <span class="fu">$</span> <span class="kw">do</span>
+    nsms <span class="ot">&lt;-</span> maybe (<span class="dt">Left</span> <span class="st">&quot;dimensions don&#39;t line up&quot;</span>) <span class="dt">Right</span> <span class="fu">$</span>
+                zipSings nsSing sing
+    lte  <span class="ot">&lt;-</span> maybe (<span class="dt">Left</span> <span class="st">&quot;dimensions out of range&quot;</span>) <span class="dt">Right</span> <span class="fu">$</span>
+                mkLTE nsms
+    f <span class="fu">$</span> (unaryOp <span class="fu">$</span> indexSlice&#39; (fmap fromIntegral <span class="fu">&lt;$&gt;</span> nss)) (encode lte) t
+
+slice&#39;
+<span class="ot">    ::</span> <span class="dt">SingI</span> ms
+    <span class="ot">=&gt;</span> [[<span class="dt">Integer</span>]]
+    <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ms a
+    <span class="ot">-&gt;</span> (forall ns<span class="fu">.</span> <span class="dt">SingI</span> ns <span class="ot">=&gt;</span> <span class="dt">Tensor</span> ns a <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">Text</span> r)
+    <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">Text</span> r
+slice&#39; nss t f <span class="fu">=</span>
+    applyEither
+    (indexSlice&#39; (fmap fromIntegral <span class="fu">&lt;$&gt;</span> nss))
+    (fmap (fromIntegral <span class="fu">.</span> length) nss) t f
+
+applyEither
+<span class="ot">    ::</span> forall ms ns os x a b<span class="fu">.</span>
+    <span class="dt">SingI</span> ms
+    <span class="ot">=&gt;</span> (forall ms os<span class="fu">.</span> (<span class="dt">SingI</span> ms, <span class="dt">SingI</span> os) <span class="ot">=&gt;</span> <span class="dt">Tensor</span> ms a <span class="ot">-&gt;</span> <span class="dt">Tensor</span> os a)
+    <span class="ot">-&gt;</span> [<span class="dt">Integer</span>]
+    <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ms a
+    <span class="ot">-&gt;</span> (forall ns<span class="fu">.</span> <span class="dt">SingI</span> ns <span class="ot">=&gt;</span> <span class="dt">Tensor</span> ns a <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">Text</span> b)
+    <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">Text</span> b
+applyEither op x t f <span class="fu">=</span> withSomeSing x <span class="fu">$</span> \nsSing <span class="ot">-&gt;</span>
+                       withSingI nsSing <span class="fu">$</span> <span class="kw">do</span>
+    nsms <span class="ot">&lt;-</span> maybe (<span class="dt">Left</span> <span class="st">&quot;dimensions don&#39;t line up&quot;</span>) <span class="dt">Right</span> <span class="fu">$</span>
+                zipSings nsSing sing
+    lte  <span class="ot">&lt;-</span> maybe (<span class="dt">Left</span> <span class="st">&quot;dimensions out of range&quot;</span>) <span class="dt">Right</span> <span class="fu">$</span>
+                mkLTE nsms
+    f <span class="fu">$</span> (unaryOp op) (encode lte) t
+
+<span class="kw">newtype</span> <span class="dt">TensorS</span> m b a <span class="fu">=</span>
+    <span class="dt">TensorS</span> {<span class="ot"> runTensor_ ::</span> forall ns<span class="fu">.</span> (<span class="dt">SingI</span> ns) <span class="ot">=&gt;</span> <span class="dt">StateT</span> (<span class="dt">Tensor</span> ns b) m a }
+
+<span class="kw">instance</span> (<span class="dt">Functor</span> m) <span class="ot">=&gt;</span> <span class="dt">Functor</span> (<span class="dt">TensorS</span> m b) <span class="kw">where</span>
+    fmap f m<span class="fu">@</span>(<span class="dt">TensorS</span> t) <span class="fu">=</span> <span class="dt">TensorS</span> <span class="fu">$</span> fmap f t
+
+<span class="kw">instance</span> (<span class="dt">Monad</span> m) <span class="ot">=&gt;</span> <span class="dt">Applicative</span> (<span class="dt">TensorS</span> m b) <span class="kw">where</span>
+    pure a <span class="fu">=</span> <span class="dt">TensorS</span> <span class="fu">$</span> pure a
+    <span class="dt">TensorS</span> a <span class="fu">&lt;*&gt;</span> <span class="dt">TensorS</span> b <span class="fu">=</span> <span class="dt">TensorS</span> <span class="fu">$</span> a <span class="fu">&lt;*&gt;</span> b
+
+<span class="co">-- |</span>
+<span class="co">-- &gt;&gt;&gt; :set -XDataKinds</span>
+<span class="co">-- &gt;&gt;&gt; :set -XOverloadedLists</span>
+<span class="co">-- &gt;&gt;&gt; let a = Tensor [1..24] :: Tensor &#39;[2,3,4] Int</span>
+<span class="co">-- &gt;&gt;&gt; sliceHeads [2,2,2] a (Left . show)</span>
+<span class="co">-- Left &quot;[[[1, 2],\n  [5, 6]],\n [[13, 14],\n  [17, 18]]]&quot;</span>
+<span class="co">-- &gt;&gt;&gt; slice [[0,1],[2],[1,2]] a (Left . show)</span>
+<span class="co">-- Left &quot;[[[10, 11]],\n [[22, 23]]]&quot;</span></code></pre></div>
+<h2 id="hacker-slicer">Hacker Slicer</h2>
+<p>Tim <a href="https://gist.github.com/o1lo01ol1o/907b850aa9bbe6c228d2db01cd137858">tim</a></p>
 <p>type-level slice function</p>
 <div class="sourceCode"><pre class="sourceCode literate haskell"><code class="sourceCode haskell">
 <span class="fu">$</span>(promote
@@ -267,10 +453,20 @@ prox _ <span class="fu">=</span> <span class="dt">Proxy</span><span class="ot">:
 <span class="co">-- ... NB: ‘Data.Singletons.Prelude.List.Map’ is a type function, and may not be injective</span>
 <span class="co">-- ... The type variable ‘x0’ is ambiguous</span>
 <span class="co">-- ...</span>
+<span class="ot">tslice ::</span> forall a (<span class="ot">r::</span>[<span class="dt">Nat</span>]) (<span class="ot">x::</span>[<span class="dt">Nat</span>])<span class="fu">.</span> (<span class="dt">SingI</span> r, <span class="dt">SingI</span> x, <span class="dt">SingI</span> x) <span class="ot">=&gt;</span>
+    [[<span class="dt">Int</span>]] <span class="ot">-&gt;</span> <span class="dt">Tensor</span> (<span class="ot">r::</span>[<span class="dt">Nat</span>]) a <span class="ot">-&gt;</span> <span class="dt">Tensor</span> (<span class="ot">x::</span>[<span class="dt">Nat</span>]) a
+tslice xs f <span class="fu">=</span> tabulate <span class="fu">$</span> \xs&#39; <span class="ot">-&gt;</span> index f (zipWith (<span class="fu">!!</span>) xs xs&#39;)
 
-<span class="ot">tslice ::</span> forall a (<span class="ot">r::</span>[<span class="dt">Nat</span>]) (<span class="ot">x::</span>[[<span class="dt">Nat</span>]])<span class="fu">.</span> (<span class="dt">SingI</span> r, <span class="dt">SingI</span> x, <span class="dt">SingI</span> (<span class="dt">TSlice</span> x)) <span class="ot">=&gt;</span>
-    [[<span class="dt">Int</span>]] <span class="ot">-&gt;</span> <span class="dt">Proxy</span> (<span class="ot">x::</span>[[<span class="dt">Nat</span>]]) <span class="ot">-&gt;</span> <span class="dt">Tensor</span> (<span class="ot">r::</span>[<span class="dt">Nat</span>]) a <span class="ot">-&gt;</span> <span class="dt">Tensor</span> ((<span class="dt">TSlice</span> x)<span class="ot">::</span>[<span class="dt">Nat</span>]) a
-tslice xs _ f <span class="fu">=</span> tabulate <span class="fu">$</span> \xs&#39; <span class="ot">-&gt;</span> index f (zipWith (<span class="fu">!!</span>) xs xs&#39;)</code></pre></div>
+<span class="ot">sliceSing ::</span> forall a c (<span class="ot">r::</span>[<span class="dt">Nat</span>])<span class="fu">.</span> (<span class="dt">SingI</span> r) <span class="ot">=&gt;</span>
+    [[<span class="dt">Int</span>]] <span class="ot">-&gt;</span> <span class="dt">Tensor</span> r a <span class="ot">-&gt;</span> (forall x<span class="fu">.</span> <span class="dt">SingI</span> x <span class="ot">=&gt;</span> <span class="dt">Tensor</span> (<span class="ot">x::</span>[<span class="dt">Nat</span>]) a <span class="ot">-&gt;</span> c) <span class="ot">-&gt;</span> c 
+sliceSing xs f <span class="fu">=</span> withSomeSing (fmap length xs) <span class="fu">$</span> \nsSing <span class="ot">-&gt;</span>
+                       withSingI nsSing <span class="fu">$</span> \t <span class="ot">-&gt;</span> tslice xs t</code></pre></div>
+<h2 id="type-family-slicer">Type Family Slicer</h2>
+<p>Lysxia</p>
+<p><a href="https://gist.github.com/Lysxia/bf4fa5adf879de309bca780a5abceff8">lysxia</a></p>
+<h2 id="defunctionalisation-for-the-win">defunctionalisation for the win</h2>
+<p><a href="https://typesandkinds.wordpress.com/2013/04/01/defunctionalization-for-the-win/">defunctionisation</a></p>
+<p><a href="https://www.reddit.com/r/haskell/comments/67f4mw/naperian_tensors/dgr16jy/">faucelme</a></p>
 <hr />
 <div class="footer">
 <p>Powered by <a href="https://haskell-lang.org/">haskell</a>, <a href="https://docs.haskellstack.org/en/stable/README/">stack</a> and <a href="http://pandoc.org/">pandoc</a>.</p>
