@@ -1,7 +1,5 @@
-name:
-  naperian
-version:
-  0.0.1
+name: numhask-tensor
+version: 0.0.1
 synopsis:
   See readme.md
 description:
@@ -9,7 +7,7 @@ description:
 category:
   project
 homepage:
-  https://github.com/tonyday567/naperian
+  https://github.com/tonyday567/numhask-tensor
 license:
   BSD3
 license-file:
@@ -30,6 +28,7 @@ extra-source-files:
   stack.yaml
   other/lhs.css
   other/header.md
+  other/footer.md
 library
   default-language:
     Haskell2010
@@ -37,17 +36,21 @@ library
   hs-source-dirs:      
     src
   exposed-modules:
-    Tensor,
-    Slicer
+    NumHask.Tensor
+  other-modules:
+    Slicer,
+    Tensor
   build-depends:
     base >= 4.7 && < 5,
     protolude,
+    numhask,
+    QuickCheck,
     vector,
     singletons,
     adjunctions,
     distributive,
-    typelits-witnesses,
-    ghc-typelits-natnormalise
+    ghc-typelits-natnormalise,
+    typelits-witnesses
   default-extensions:
     NoImplicitPrelude,
     UnicodeSyntax,
@@ -95,12 +98,11 @@ test-suite test
   build-depends:
     base >= 4.7 && < 5,
     tasty,
-    HUnit,
-    tasty-hunit,
-    QuickCheck,
     tasty-quickcheck,
     doctest,
-    protolude
+    protolude,
+    numhask,
+    numhask-tensor
   default-extensions:
     NoImplicitPrelude,
     UnicodeSyntax,
