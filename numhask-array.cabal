@@ -1,4 +1,4 @@
-name: numhask-tensor
+name: numhask-array
 version: 0.0.1
 synopsis:
   See readme.md
@@ -7,7 +7,7 @@ description:
 category:
   project
 homepage:
-  https://github.com/tonyday567/numhask-tensor
+  https://github.com/tonyday567/numhask-array
 license:
   BSD3
 license-file:
@@ -24,11 +24,7 @@ cabal-version:
   >=1.14
 extra-source-files:
   readme.md
-  index.html
   stack.yaml
-  other/lhs.css
-  other/header.md
-  other/footer.md
 library
   default-language:
     Haskell2010
@@ -36,10 +32,10 @@ library
   hs-source-dirs:      
     src
   exposed-modules:
-    NumHask.Tensor
+    NumHask.Array
+    NumHask.Array.Slicer
   other-modules:
-    Slicer,
-    Tensor
+
   build-depends:
     base >= 4.7 && < 5,
     protolude,
@@ -102,7 +98,7 @@ test-suite test
     doctest,
     protolude,
     numhask,
-    numhask-tensor
+    numhask-array
   default-extensions:
     NoImplicitPrelude,
     UnicodeSyntax,
@@ -142,4 +138,4 @@ source-repository head
   type:
     git
   location:
-    https://github.com/tonyday567/naperian
+    https://github.com/tonyday567/numhask-array
