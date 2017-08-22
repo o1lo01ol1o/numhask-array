@@ -81,4 +81,4 @@ Thanks to [Justin](https://blog.jle.im/entry/practical-dependent-types-in-haskel
 Right "[[[9, 10]],\n [[21, 22]]]"
 ```
 
-And there it is.  Despite types being utterly erased at run-time, slicer first deeply embeds an idea, and then enters ghc at the exact moment of erasure, does a lot of running about, continuation passing style, then emerges with the goods. Most intruigingly, the array is correctly typed but neither the user nor ghc can ever known what that type ever was.
+Magic has happened.  Despite types being utterly erased at run-time, slicer sneakily embeds unsafeSlice deep into GHC's unconcious, then enters ghc at the exact moment of erasure, does a lot of continuation passing style running about, and then emerges with the goods before run-time sees what's going on. Most intruigingly, the array is correctly typed but neither the user nor ghc can ever known what that type was.

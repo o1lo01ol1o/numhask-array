@@ -102,6 +102,7 @@ slicer nss t f = withSomeSing (fmap (fromIntegral . length) nss) $ \nsSing ->
 -- |
 -- >>> :set -XDataKinds
 -- >>> :set -XOverloadedLists
+-- >>> :set -XFlexibleContexts
 -- >>> let a = Array [1..24] :: Array '[2,3,4] Int
--- >>> slicer [[0,1],[2],[1,2]] a (Right . show)
+-- >>> slicer [[0,1],[2],[1,2]] a (Right . (\x -> show x :: Text))
 -- Right "[[[10, 11]],\n [[22, 23]]]"
