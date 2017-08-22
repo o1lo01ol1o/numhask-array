@@ -27,7 +27,7 @@ And we'd like a function that takes a list of index lists (third dimension, colu
 
 There are three main version of an array slicer contained in this repo:
 
-unsafeSlice in NumHask.Array
+unsafeSlice
 ---
 
 ```
@@ -41,7 +41,7 @@ a1 :: Array r0 Int
 
 The Array shape has to be supplied to the type.  Not very useful.
 
-slice in NumHask.Array
+slice
 ---
 
 ```
@@ -55,24 +55,10 @@ a2 :: Array (2 :$$$ '[1, 2]) Int
 
 The compiler worked it out, and just got a little stutter in trying to cons the new shape together. Progress, but note that the slice list had to be supplied at the type-level - no typing it in from the console.
 
-slice in NumHask.Array.Slicer
+slicer (in NumHask.Array.Slicer)
 ---
 
-```
-> let a2 = slice (Proxy :: Proxy ['[0,1],'[2],'[1,2]]) a
-> :t a2
-a2 :: Array (2 :$$$ '[1, 2]) Int
-> a2
-[[[10, 11]],
- [[22, 23]]]
-```
-
-The compiler worked it out, and just got a little stutter in trying to cons the new shape together. Progress, but note that the slice list had to be supplied at the type-level - no typing it in from the console.
-
-slicer in NumHask.Array.Slicer
----
-
-Thanks to [Justin](https://blog.jle.im/entry/practical-dependent-types-in-haskell-2.html) for getting this together.
+Thanks to [Justin Le](https://blog.jle.im/entry/practical-dependent-types-in-haskell-2.html) for getting this together.
 
 ```
 > let a = Array [1..24] :: Array '[2,3,4] Int
