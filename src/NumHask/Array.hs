@@ -26,6 +26,7 @@ import Data.Singletons
 import Data.Singletons.Prelude
 import Data.Singletons.TypeLits
 import GHC.Exts
+import NumHask.Array.Constraints
 import GHC.Show
 import Protolude hiding (show, (<.>), Map, All)
 import qualified Data.Vector as V
@@ -252,4 +253,22 @@ slice
   => Proxy s -> Array r a -> Array (Slice s) a
 slice s_ t = unsafeSlice s t
   where
-    s = ((fmap . fmap) fromInteger . fromSing . singByProxy) s_  
+    s = ((fmap . fmap) fromInteger . fromSing . singByProxy) s_
+
+
+chunkItUp :: [V.Vector a] -> Int -> V.Vector a -> [V.Vector a]
+chunkItUp acc i v = case null v of
+                      False -> let (c, r) = V.splitAt i v
+                               in chunkItUp (c : acc) i r
+                      True -> acc
+
+concatenate
+  :: forall s r t a
+  . (SingI s, SingI r, SingI t, (IsValidConcat s t r) ~ 'True)
+  => Proxy s -> Array r a  -> Array t a -> Array (Concatenate s t r) a
+concatenate s_ r t = Array . V.concat $ (concat . transpose) [rm, tm]
+  where
+    s = (fromInteger . fromSing . singByProxy) s_
+    rm = chunkItUp [] (product $ drop s $ shape t) $ flattenArray t
+    tm =  chunkItUp [] (product $ drop s $ shape r) $ flattenArray r
+    
