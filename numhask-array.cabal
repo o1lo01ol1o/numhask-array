@@ -34,6 +34,7 @@ library
   exposed-modules:
     NumHask.Array
     NumHask.Array.Slicer
+    NumHask.Array.Constraints
   other-modules:
 
   build-depends:
