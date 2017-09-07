@@ -282,7 +282,7 @@ foldAlong s_ f a = Array $ V.concat (foldl' (\xs x -> let (Array vx) = f (Array 
 
 -- |
 --
--- >>> mapAlong (Proxy :: Proxy 0) (\x -> NumHask.Array.zipWith (*) x x)) a
+-- >>> mapAlong (Proxy :: Proxy 0) (\x -> NumHask.Array.zipWith (*) x x) a
 -- [[[1, 4, 9, 16],
 --   [25, 36, 49, 64],
 --   [81, 100, 121, 144]],
