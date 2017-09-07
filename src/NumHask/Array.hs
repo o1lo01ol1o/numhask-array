@@ -1,35 +1,35 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveFoldable             #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeInType #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE NoImplicitPrelude          #-}
+{-# LANGUAGE OverloadedLists            #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeInType                 #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 -- | safe-typed n-dimensional arrays
 module NumHask.Array where
 
-import Data.Distributive
-import Data.Functor.Rep
-import Data.Promotion.Prelude
-import Data.Singletons
-import Data.Singletons.Prelude
-import Data.Singletons.TypeLits
-import GHC.Exts
-import NumHask.Array.Constraints
-import GHC.Show
-import Protolude hiding (show, (<.>), Map, All)
-import qualified Data.Vector as V
+import           Data.Distributive
+import           Data.Functor.Rep
+import           Data.Promotion.Prelude
+import           Data.Singletons
+import           Data.Singletons.Prelude
+import           Data.Singletons.TypeLits
+import qualified Data.Vector               as V
+import           GHC.Exts
+import           GHC.Show
+import           NumHask.Array.Constraints
+import           Protolude                 hiding (All, Map, show, (<.>))
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -68,7 +68,7 @@ shape _ = fmap fromIntegral (fromSing (sing :: Sing r))
 -- >>> ind [2,3,4] [1,1,1]
 -- 17
 ind :: [Int] -> [Int] -> Int
-ind ns xs = sum $ zipWith (*) xs (drop 1 $ scanr (*) 1 ns)
+ind ns xs = sum $ Protolude.zipWith (*) xs (drop 1 $ scanr (*) 1 ns)
 
 -- | convert from a flat index to a shape index
 -- >>> unind [2,3,4] 17
@@ -118,7 +118,7 @@ instance (Show a) => Show (SomeArray a) where
         go n r'@(SomeArray l' v') = case length l' of
           0 -> show $ V.head v'
           1 -> "[" ++ intercalate ", " (show <$> GHC.Exts.toList v') ++ "]"
-          x -> 
+          x ->
               "[" ++
               intercalate
               (",\n" ++ replicate (n-x+1) ' ')
@@ -256,19 +256,129 @@ slice s_ t = unsafeSlice s t
     s = ((fmap . fmap) fromInteger . fromSing . singByProxy) s_
 
 
+-- Chunks a vector v into a list of modules whose dimension is each i
 chunkItUp :: [V.Vector a] -> Int -> V.Vector a -> [V.Vector a]
 chunkItUp acc i v = case null v of
                       False -> let (c, r) = V.splitAt i v
                                in chunkItUp (c : acc) i r
                       True -> acc
 
+zipWith :: (a -> a -> a) -> Array s a -> Array s a -> Array s a
+zipWith fn a b = Array $ V.zipWith fn (flattenArray a) (flattenArray b)
+
+-- |
+--
+-- >>> foldAlong (Proxy :: Proxy 1) (\_ -> ([0..3] :: Array '[4] Int)) a
+-- [[0, 1, 2, 3],
+--  [0, 1, 2, 3]]
+foldAlong :: forall s vw uvw uw w a
+  . (SingI s,  SingI uvw, uw ~ (Fold s uvw), w ~ (Drop 1 vw) , vw ~ (TailModule s uvw))
+  => Proxy s -> (Array vw a -> Array w a) -> Array uvw a -> Array uw a
+foldAlong s_ f a = Array $ V.concat (foldl' (\xs x -> let (Array vx) = f (Array x)
+                                                      in vx : xs) [] md)
+  where
+    s = (fromInteger . fromSing . singByProxy) s_
+    md =  chunkItUp [] (product $ drop s $ shape a) $ flattenArray a
+
+-- |
+--
+-- >>> mapAlong (Proxy :: Proxy 0) (\x -> NumHask.Array.zipWith (*) x x)) a
+-- [[[1, 4, 9, 16],
+--   [25, 36, 49, 64],
+--   [81, 100, 121, 144]],
+--  [[169, 196, 225, 256],
+--   [289, 324, 361, 400],
+--   [441, 484, 529, 576]]]
+
+
+
+mapAlong :: forall s uvw vw a
+  . (SingI s, SingI uvw, vw ~ (HeadModule s uvw)) => Proxy s -> (Array vw a -> Array vw a) -> Array uvw a -> Array uvw a
+mapAlong s_ f a = Array $ V.concat (foldl' (\xs x -> let (Array vx) = f (Array x)
+                                                      in vx : xs) [] md)
+  where
+    s = (fromInteger . fromSing . singByProxy) s_
+    md =  chunkItUp [] (product $ drop s $ shape a) $ flattenArray a
+
+-- |
+--
+-- >>> concatenate (Proxy :: Proxy 2) a a
+-- [[[1, 2, 3, 4, 1, 2, 3, 4],
+--   [5, 6, 7, 8, 5, 6, 7, 8],
+--   [9, 10, 11, 12, 9, 10, 11, 12]],
+--  [[13, 14, 15, 16, 13, 14, 15, 16],
+--   [17, 18, 19, 20, 17, 18, 19, 20],
+--   [21, 22, 23, 24, 21, 22, 23, 24]]]
 concatenate
   :: forall s r t a
   . (SingI s, SingI r, SingI t, (IsValidConcat s t r) ~ 'True)
   => Proxy s -> Array r a  -> Array t a -> Array (Concatenate s t r) a
-concatenate s_ r t = Array . V.concat $ (concat . transpose) [rm, tm]
+concatenate s_ r t = Array . V.concat $ (concat . reverse . Protolude.transpose) [rm, tm]
   where
     s = (fromInteger . fromSing . singByProxy) s_
     rm = chunkItUp [] (product $ drop s $ shape t) $ flattenArray t
     tm =  chunkItUp [] (product $ drop s $ shape r) $ flattenArray r
-    
+
+
+-- |
+--
+-- >>> NumHask.Array.transpose a
+-- [[[1, 2],
+--   [3, 4],
+--   [5, 6]],
+--  [[7, 8],
+--   [9, 10],
+--   [11, 12]],
+--  [[13, 14],
+--   [15, 16],
+--   [17, 18]],
+--  [[19, 20],
+--   [21, 22],
+--   [23, 24]]]
+
+transpose :: forall s t a.
+  (t ~ Transpose s)
+  => Array s a -> Array t a
+transpose (Array x) = Array x
+
+
+-- |
+--
+-- >>> let a = [1..24] :: Array '[2,1,3,4,1] Int
+-- >>> a
+-- [[[[[1],
+--     [2],
+--     [3],
+--     [4]],
+--    [[5],
+--     [6],
+--     [7],
+--     [8]],
+--    [[9],
+--     [10],
+--     [11],
+--     [12]]]],
+--  [[[[13],
+--     [14],
+--     [15],
+--     [16]],
+--    [[17],
+--     [18],
+--     [19],
+--     [20]],
+--    [[21],
+--     [22],
+--     [23],
+--     [24]]]]]
+-- >>> squeeze a
+-- [[[1, 2, 3, 4],
+--   [5, 6, 7, 8],
+--   [9, 10, 11, 12]],
+--  [[13, 14, 15, 16],
+--   [17, 18, 19, 20],
+--   [21, 22, 23, 24]]]
+squeeze :: forall s t a.
+  (t ~ Squeeze s)
+  => Array s a -> Array t a
+squeeze (Array x) = Array x
+
