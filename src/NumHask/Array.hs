@@ -36,8 +36,7 @@ import GHC.Exts
 import NumHask.Array.Constraints
 import GHC.Show
 import qualified Data.Vector as V
--- import NumHask.Shape
-import NumHask.Prelude hiding (shape, show, (<.>), (><), Map, All, mmult)
+import NumHask.Prelude hiding (show, (<.>), (><), Map, All)
 import qualified NumHask.Prelude as P
 
 -- $setup
@@ -150,10 +149,10 @@ instance (Show a, SingI r) => Show (Array (r::[Nat]) a) where
 
 -- | inner product
 -- >>> let v = [1,2,3] :: Array '[3] Int
--- >>> v <.> v
+-- >>> v `inner` v
 -- 14
-(<.>) :: (Num a, CRing a, Foldable m, Representable m) => m a -> m a -> a
-(<.>) a b = sum $ liftR2 (*) a b
+inner :: (Num a, CRing a, Foldable m, Representable m) => m a -> m a -> a
+inner a b = sum $ liftR2 (*) a b
 
 -- | outer product
 -- >>> v >< v
@@ -185,7 +184,7 @@ mmult :: forall m n k a. (Num a, CRing a, KnownNat m, KnownNat n, KnownNat k) =>
     Array '[m,k] a ->
     Array '[k,n] a ->
     Array '[m,n] a
-mmult x y = tabulate (\[i,j] -> unsafeRow i x <.> unsafeCol j y)
+mmult x y = tabulate (\[i,j] -> unsafeRow i x `inner` unsafeCol j y)
 
 -- | extract the row of a matrix
 row
@@ -391,3 +390,87 @@ squeeze :: forall s t a.
   => Array s a -> Array t a
 squeeze (Array x) = Array x
 
+instance (SingI r, AdditiveMagma a) => AdditiveMagma (Array r a) where
+  plus = liftR2 plus
+
+instance (SingI r, AdditiveUnital a) => AdditiveUnital (Array r a) where
+  zero = pureRep zero
+
+instance (SingI r, AdditiveAssociative a) =>
+         AdditiveAssociative (Array r a)
+
+instance (SingI r, AdditiveCommutative a) =>
+         AdditiveCommutative (Array r a)
+
+instance (SingI r, AdditiveInvertible a) =>
+         AdditiveInvertible (Array r a) where
+  negate = fmapRep negate
+
+instance (SingI r, Additive a) => Additive (Array r a)
+
+instance (SingI r, AdditiveGroup a) => AdditiveGroup (Array r a)
+
+instance (SingI r, MultiplicativeMagma a) =>
+         MultiplicativeMagma (Array r a) where
+  times = liftR2 times
+
+instance (SingI r, MultiplicativeUnital a) =>
+         MultiplicativeUnital (Array r a) where
+  one = pureRep one
+
+instance (SingI r, MultiplicativeAssociative a) =>
+         MultiplicativeAssociative (Array r a)
+
+instance (SingI r, MultiplicativeCommutative a) =>
+         MultiplicativeCommutative (Array r a)
+
+instance (SingI r, MultiplicativeInvertible a) =>
+         MultiplicativeInvertible (Array r a) where
+  recip = fmapRep recip
+
+instance (SingI r, Multiplicative a) => Multiplicative (Array r a)
+
+instance (SingI r, MultiplicativeGroup a) =>
+         MultiplicativeGroup (Array r a)
+
+instance (SingI r, MultiplicativeMagma a, Additive a) =>
+         Distribution (Array r a)
+
+instance (SingI r, Semiring a) => Semiring (Array r a)
+
+instance (SingI r, Ring a) => Ring (Array r a)
+
+instance (SingI r, CRing a) => CRing (Array r a)
+
+instance (SingI r, Field a) => Field (Array r a)
+
+instance (SingI r, ExpField a) => ExpField (Array r a) where
+  exp = fmapRep exp
+  log = fmapRep log
+
+instance (SingI r, BoundedField a) => BoundedField (Array r a) where
+  isNaN f = or (fmapRep isNaN f)
+
+instance (SingI r, Signed a) => Signed (Array r a) where
+  sign = fmapRep sign
+  abs = fmapRep abs
+
+instance (ExpField a) => Normed (Array r a) a where
+  size r = sqrt $ foldr (+) zero $ (** (one + one)) <$> r
+
+instance (SingI r, Epsilon a) => Epsilon (Array r a) where
+  nearZero f = and (fmapRep nearZero f)
+  aboutEqual a b = and (liftR2 aboutEqual a b)
+
+instance (SingI r, ExpField a) => Metric (Array r a) a where
+  distance a b = size (a - b)
+
+instance (SingI r, Integral a) => Integral (Array r a) where
+  divMod a b = (d, m)
+    where
+      x = liftR2 divMod a b
+      d = fmap fst x
+      m = fmap snd x
+
+instance (CRing a, Num a, Semiring a, SingI r) => Hilbert (Array r) a where
+    (<.>) = inner
