@@ -35,6 +35,7 @@ library
     NumHask.Array
     NumHask.Array.Slicer
     NumHask.Array.Constraints
+    NumHask.Array.Example
   other-modules:
 
   build-depends:

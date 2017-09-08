@@ -11,4 +11,6 @@ main = do
     doctest ["src/NumHask/Array.hs"]
     putStrLn ("Slicer DocTest" :: Text)
     doctest ["src/NumHask/Array/Slicer.hs"]
+    putStrLn ("Example DocTest" :: Text)
+    doctest ["src/NumHask/Array/Example.hs"]
 

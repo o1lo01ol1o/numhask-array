@@ -36,7 +36,7 @@ import GHC.Exts
 import NumHask.Array.Constraints
 import GHC.Show
 import qualified Data.Vector as V
-import NumHask.Prelude hiding (show, (><), Map, All)
+import NumHask.Prelude hiding (show, (><), Map, All, mmult)
 import qualified NumHask.Prelude as P
 
 -- $setup
