@@ -26,17 +26,19 @@
 -- | safe-typed n-dimensional arrays
 module NumHask.Array where
 
-import           Data.Distributive
-import           Data.Functor.Rep
-import           Data.Promotion.Prelude
-import           Data.Singletons
-import           Data.Singletons.Prelude
-import           Data.Singletons.TypeLits
-import qualified Data.Vector               as V
-import           GHC.Exts
-import           GHC.Show
-import           NumHask.Array.Constraints
-import           Protolude                 hiding (All, Map, show, (<.>))
+import Data.Distributive
+import Data.Functor.Rep
+import Data.Promotion.Prelude
+import Data.Singletons
+import Data.Singletons.Prelude
+import Data.Singletons.TypeLits
+import GHC.Exts
+import NumHask.Array.Constraints
+import GHC.Show
+import qualified Data.Vector as V
+-- import NumHask.Shape
+import NumHask.Prelude hiding (shape, show, (<.>), (><), Map, All, mmult)
+import qualified NumHask.Prelude as P
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -75,7 +77,7 @@ shape _ = fmap fromIntegral (fromSing (sing :: Sing r))
 -- >>> ind [2,3,4] [1,1,1]
 -- 17
 ind :: [Int] -> [Int] -> Int
-ind ns xs = sum $ Protolude.zipWith (*) xs (drop 1 $ scanr (*) 1 ns)
+ind ns xs = sum $ P.zipWith (*) xs (drop 1 $ scanr (*) 1 ns)
 
 -- | convert from a flat index to a shape index
 -- >>> unind [2,3,4] 17
@@ -150,7 +152,7 @@ instance (Show a, SingI r) => Show (Array (r::[Nat]) a) where
 -- >>> let v = [1,2,3] :: Array '[3] Int
 -- >>> v <.> v
 -- 14
-(<.>) :: (Num a, Foldable m, Representable m) => m a -> m a -> a
+(<.>) :: (Num a, CRing a, Foldable m, Representable m) => m a -> m a -> a
 (<.>) a b = sum $ liftR2 (*) a b
 
 -- | outer product
@@ -160,7 +162,7 @@ instance (Show a, SingI r) => Show (Array (r::[Nat]) a) where
 --  [3, 6, 9]]
 (><)
     :: forall (r::[Nat]) (s::[Nat]) a
-    . (Num a, SingI r, SingI s, SingI (r :++ s))
+    . (CRing a, SingI r, SingI s, SingI (r :++ s))
     => Array r a -> Array s a -> Array (r :++ s) a
 (><) m n = tabulate (\i -> index m (take dimm i) * index n (drop dimm i))
   where
@@ -179,7 +181,7 @@ instance (Show a, SingI r) => Show (Array (r::[Nat]) a) where
 -- >>> mmult a b
 -- [[19, 22],
 --  [43, 50]]
-mmult :: forall m n k a. (Num a, KnownNat m, KnownNat n, KnownNat k) =>
+mmult :: forall m n k a. (Num a, CRing a, KnownNat m, KnownNat n, KnownNat k) =>
     Array '[m,k] a ->
     Array '[k,n] a ->
     Array '[m,n] a
@@ -320,7 +322,7 @@ concatenate
   :: forall s r t a
   . (SingI s, SingI r, SingI t, (IsValidConcat s t r) ~ 'True)
   => Proxy s -> Array r a  -> Array t a -> Array (Concatenate s t r) a
-concatenate s_ r t = Array . V.concat $ (concat . reverse . Protolude.transpose) [rm, tm]
+concatenate s_ r t = Array . V.concat $ (concat . reverse . P.transpose) [rm, tm]
   where
     s = (fromInteger . fromSing . singByProxy) s_
     rm = chunkItUp [] (product $ drop s $ shape t) $ flattenArray t
