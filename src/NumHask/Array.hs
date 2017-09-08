@@ -36,7 +36,7 @@ import GHC.Exts
 import NumHask.Array.Constraints
 import GHC.Show
 import qualified Data.Vector as V
-import NumHask.Prelude hiding (show, (<.>), (><), Map, All)
+import NumHask.Prelude hiding (show, (><), Map, All)
 import qualified NumHask.Prelude as P
 
 -- $setup
@@ -69,8 +69,16 @@ someArray n = SomeArray (shape n) (flattenArray n)
 -- | extracts shape from the type level
 -- >>> shape a
 -- [2,3,4]
-shape :: forall (r::[Nat]) a. (SingI r) => Array r a -> [Int]
-shape _ = fmap fromIntegral (fromSing (sing :: Sing r))
+instance forall (r::[Nat]). (SingI r) => HasShape (Array r) where
+  type Shape (Array r) = [Int]
+  shape _ = fmap fromIntegral (fromSing (sing :: Sing r))
+
+-- | dimension is the length of the type-level shape list
+-- todo: integrate with NumHask.Shape
+-- >>> dim a
+-- 3
+dim :: forall (r::[Nat]) a. (SingI r) => Array r a -> Int
+dim a = length (shape a)
 
 -- | convert from n-dim shape index to a flat index
 -- >>> ind [2,3,4] [1,1,1]
@@ -147,13 +155,6 @@ instance (Show a, SingI r) => Show (Array (r::[Nat]) a) where
 
 -- ** Operations
 
--- | inner product
--- >>> let v = [1,2,3] :: Array '[3] Int
--- >>> v `inner` v
--- 14
-inner :: (Num a, CRing a, Foldable m, Representable m) => m a -> m a -> a
-inner a b = sum $ liftR2 (*) a b
-
 -- | outer product
 -- >>> v >< v
 -- [[1, 2, 3],
@@ -180,11 +181,11 @@ inner a b = sum $ liftR2 (*) a b
 -- >>> mmult a b
 -- [[19, 22],
 --  [43, 50]]
-mmult :: forall m n k a. (Num a, CRing a, KnownNat m, KnownNat n, KnownNat k) =>
+mmult :: forall m n k a. (Semiring a, Num a, CRing a, KnownNat m, KnownNat n, KnownNat k) =>
     Array '[m,k] a ->
     Array '[k,n] a ->
     Array '[m,n] a
-mmult x y = tabulate (\[i,j] -> unsafeRow i x `inner` unsafeCol j y)
+mmult x y = tabulate (\[i,j] -> unsafeRow i x <.> unsafeCol j y)
 
 -- | extract the row of a matrix
 row
@@ -472,5 +473,9 @@ instance (SingI r, Integral a) => Integral (Array r a) where
       d = fmap fst x
       m = fmap snd x
 
+-- | inner product
+-- >>> let v = [1,2,3] :: Array '[3] Int
+-- >>> v <.> v
+-- 14
 instance (CRing a, Num a, Semiring a, SingI r) => Hilbert (Array r) a where
-    (<.>) = inner
+    a <.> b = sum $ liftR2 (*) a b
