@@ -15,6 +15,13 @@
 {-# LANGUAGE TypeInType                 #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- | safe-typed n-dimensional arrays
 module NumHask.Array where
@@ -212,7 +219,7 @@ unsafeCol :: forall a m n. (KnownNat m, KnownNat n) =>
     Int ->
     Array '[m,n] a ->
     Array '[m] a
-unsafeCol j t@(Array a) = Array $ V.generate n (\x -> a V.! (j+x*m))
+unsafeCol j t@(Array a) = Array $ V.generate m (\x -> a V.! (j+x*n))
   where
     [m,n] = shape t
 
