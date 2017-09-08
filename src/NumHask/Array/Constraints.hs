@@ -13,7 +13,7 @@
 {-# LANGUAGE TypeInType           #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
-module NumHask.Array.Constraints (IsValidConcat,Squeeze, Concatenate, IsValidTranspose, DimShuffle ) where
+module NumHask.Array.Constraints (IsValidConcat,Squeeze, Concatenate, IsValidTranspose, DimShuffle, Fold, FoldAlong, TailModule, HeadModule,Transpose ) where
 import           Data.Singletons.Prelude       hiding (Max)
 import           Data.Singletons.Prelude.Base  (MapSym0, MapSym1)
 import           Data.Singletons.Prelude.List  ((:!!$), All, Concat, Drop,
@@ -69,15 +69,36 @@ type family IsValidTranspose (p :: [Nat]) (a :: [Nat]) :: P.Bool
                              (Minimum p :>= 0) :&&
                                (Minimum a :>= 0) :&&
                                  (Sum a :== Sum p) :&& (Length p) :== (Length a)
+type family Transpose a  where
+  Transpose a = Reverse a
 
 type family AddDimension (d :: Nat) t :: [Nat] where
         AddDimension d t = Insert d t
 
 type family Concatenate i (a::[Nat]) (b::[Nat]) :: [Nat] where
-  Concatenate i a b = (Take (i :- 1) (Fst (SplitAt i a))) :++
-                        ('[(Head (Drop (i :- 1) a)) :+ (Head (Drop (i :-1) b))]) :++
-                          (Snd (SplitAt i b))
 
+  Concatenate i a b = (Take (i) (Fst (SplitAt (i :+1) a))) :++
+                        ('[(Head (Drop (i) a)) :+ (Head (Drop (i) b))]) :++
+                          (Snd (SplitAt (i :+ 1) b))
+
+-- | Reduces axis i in shape s.  Maintains singlton dimension
+type family FoldAlong i (s::[Nat]) where
+  FoldAlong _ '[] = '[]
+  FoldAlong d xs = (Take (d) (Fst (SplitAt (d :+1 ) xs))) :++ '[1] :++ (Snd (SplitAt (d :+1 ) xs))
+
+-- | Reduces axis i in shape s. Does not maintain singlton dimension.
+type family Fold i (s::[Nat]) where
+  Fold _ '[] = '[]
+  Fold d xs = (Take (d) (Fst (SplitAt (d :+1 ) xs))) :++ (Snd (SplitAt (d :+1 ) xs))
+
+type family TailModule i (s::[Nat]) where
+  TailModule _ '[]= '[]
+
+  TailModule d xs = (Snd (SplitAt (d) xs))
+
+type family HeadModule i (s::[Nat]) where
+  HeadModule _ '[]= '[]
+  HeadModule d xs = (Fst (SplitAt (d ) xs))
 
 $(promote
       [d|
@@ -88,5 +109,7 @@ $(promote
   dimShuffle (x : xs) (b : bs)
     = if b P.== 0 then x : dimShuffle xs bs else
         (xs !! (b P.- 1)) : dimShuffle xs bs
+
+
   |])
 
