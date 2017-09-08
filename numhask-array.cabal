@@ -35,12 +35,13 @@ library
     NumHask.Array
     NumHask.Array.Slicer
     NumHask.Array.Constraints
+    NumHask.Array.Example
   other-modules:
 
   build-depends:
     base >= 4.7 && < 5,
     protolude,
-    numhask,
+    numhask >= 0.1.2,
     QuickCheck,
     vector,
     singletons,

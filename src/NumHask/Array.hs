@@ -15,21 +15,29 @@
 {-# LANGUAGE TypeInType                 #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- | safe-typed n-dimensional arrays
 module NumHask.Array where
 
-import           Data.Distributive
-import           Data.Functor.Rep
-import           Data.Promotion.Prelude
-import           Data.Singletons
-import           Data.Singletons.Prelude
-import           Data.Singletons.TypeLits
-import qualified Data.Vector               as V
-import           GHC.Exts
-import           GHC.Show
-import           NumHask.Array.Constraints
-import           Protolude                 hiding (All, Map, show, (<.>))
+import Data.Distributive
+import Data.Functor.Rep
+import Data.Promotion.Prelude
+import Data.Singletons
+import Data.Singletons.Prelude
+import Data.Singletons.TypeLits
+import GHC.Exts
+import NumHask.Array.Constraints
+import GHC.Show
+import qualified Data.Vector as V
+import NumHask.Prelude hiding (show, (><), Map, All, mmult)
+import qualified NumHask.Prelude as P
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -61,14 +69,22 @@ someArray n = SomeArray (shape n) (flattenArray n)
 -- | extracts shape from the type level
 -- >>> shape a
 -- [2,3,4]
-shape :: forall (r::[Nat]) a. (SingI r) => Array r a -> [Int]
-shape _ = fmap fromIntegral (fromSing (sing :: Sing r))
+instance forall (r::[Nat]). (SingI r) => HasShape (Array r) where
+  type Shape (Array r) = [Int]
+  shape _ = fmap fromIntegral (fromSing (sing :: Sing r))
+
+-- | dimension is the length of the type-level shape list
+-- todo: integrate with NumHask.Shape
+-- >>> dim a
+-- 3
+dim :: forall (r::[Nat]) a. (SingI r) => Array r a -> Int
+dim a = length (shape a)
 
 -- | convert from n-dim shape index to a flat index
 -- >>> ind [2,3,4] [1,1,1]
 -- 17
 ind :: [Int] -> [Int] -> Int
-ind ns xs = sum $ Protolude.zipWith (*) xs (drop 1 $ scanr (*) 1 ns)
+ind ns xs = sum $ P.zipWith (*) xs (drop 1 $ scanr (*) 1 ns)
 
 -- | convert from a flat index to a shape index
 -- >>> unind [2,3,4] 17
@@ -139,13 +155,6 @@ instance (Show a, SingI r) => Show (Array (r::[Nat]) a) where
 
 -- ** Operations
 
--- | inner product
--- >>> let v = [1,2,3] :: Array '[3] Int
--- >>> v <.> v
--- 14
-(<.>) :: (Num a, Foldable m, Representable m) => m a -> m a -> a
-(<.>) a b = sum $ liftR2 (*) a b
-
 -- | outer product
 -- >>> v >< v
 -- [[1, 2, 3],
@@ -153,7 +162,7 @@ instance (Show a, SingI r) => Show (Array (r::[Nat]) a) where
 --  [3, 6, 9]]
 (><)
     :: forall (r::[Nat]) (s::[Nat]) a
-    . (Num a, SingI r, SingI s, SingI (r :++ s))
+    . (CRing a, SingI r, SingI s, SingI (r :++ s))
     => Array r a -> Array s a -> Array (r :++ s) a
 (><) m n = tabulate (\i -> index m (take dimm i) * index n (drop dimm i))
   where
@@ -172,7 +181,7 @@ instance (Show a, SingI r) => Show (Array (r::[Nat]) a) where
 -- >>> mmult a b
 -- [[19, 22],
 --  [43, 50]]
-mmult :: forall m n k a. (Num a, KnownNat m, KnownNat n, KnownNat k) =>
+mmult :: forall m n k a. (Semiring a, Num a, CRing a, KnownNat m, KnownNat n, KnownNat k) =>
     Array '[m,k] a ->
     Array '[k,n] a ->
     Array '[m,n] a
@@ -212,7 +221,7 @@ unsafeCol :: forall a m n. (KnownNat m, KnownNat n) =>
     Int ->
     Array '[m,n] a ->
     Array '[m] a
-unsafeCol j t@(Array a) = Array $ V.generate n (\x -> a V.! (j+x*m))
+unsafeCol j t@(Array a) = Array $ V.generate m (\x -> a V.! (j+x*n))
   where
     [m,n] = shape t
 
@@ -313,7 +322,7 @@ concatenate
   :: forall s r t a
   . (SingI s, SingI r, SingI t, (IsValidConcat s t r) ~ 'True)
   => Proxy s -> Array r a  -> Array t a -> Array (Concatenate s t r) a
-concatenate s_ r t = Array . V.concat $ (concat . reverse . Protolude.transpose) [rm, tm]
+concatenate s_ r t = Array . V.concat $ (concat . reverse . P.transpose) [rm, tm]
   where
     s = (fromInteger . fromSing . singByProxy) s_
     rm = chunkItUp [] (product $ drop s $ shape t) $ flattenArray t
@@ -382,3 +391,91 @@ squeeze :: forall s t a.
   => Array s a -> Array t a
 squeeze (Array x) = Array x
 
+instance (SingI r, AdditiveMagma a) => AdditiveMagma (Array r a) where
+  plus = liftR2 plus
+
+instance (SingI r, AdditiveUnital a) => AdditiveUnital (Array r a) where
+  zero = pureRep zero
+
+instance (SingI r, AdditiveAssociative a) =>
+         AdditiveAssociative (Array r a)
+
+instance (SingI r, AdditiveCommutative a) =>
+         AdditiveCommutative (Array r a)
+
+instance (SingI r, AdditiveInvertible a) =>
+         AdditiveInvertible (Array r a) where
+  negate = fmapRep negate
+
+instance (SingI r, Additive a) => Additive (Array r a)
+
+instance (SingI r, AdditiveGroup a) => AdditiveGroup (Array r a)
+
+instance (SingI r, MultiplicativeMagma a) =>
+         MultiplicativeMagma (Array r a) where
+  times = liftR2 times
+
+instance (SingI r, MultiplicativeUnital a) =>
+         MultiplicativeUnital (Array r a) where
+  one = pureRep one
+
+instance (SingI r, MultiplicativeAssociative a) =>
+         MultiplicativeAssociative (Array r a)
+
+instance (SingI r, MultiplicativeCommutative a) =>
+         MultiplicativeCommutative (Array r a)
+
+instance (SingI r, MultiplicativeInvertible a) =>
+         MultiplicativeInvertible (Array r a) where
+  recip = fmapRep recip
+
+instance (SingI r, Multiplicative a) => Multiplicative (Array r a)
+
+instance (SingI r, MultiplicativeGroup a) =>
+         MultiplicativeGroup (Array r a)
+
+instance (SingI r, MultiplicativeMagma a, Additive a) =>
+         Distribution (Array r a)
+
+instance (SingI r, Semiring a) => Semiring (Array r a)
+
+instance (SingI r, Ring a) => Ring (Array r a)
+
+instance (SingI r, CRing a) => CRing (Array r a)
+
+instance (SingI r, Field a) => Field (Array r a)
+
+instance (SingI r, ExpField a) => ExpField (Array r a) where
+  exp = fmapRep exp
+  log = fmapRep log
+
+instance (SingI r, BoundedField a) => BoundedField (Array r a) where
+  isNaN f = or (fmapRep isNaN f)
+
+instance (SingI r, Signed a) => Signed (Array r a) where
+  sign = fmapRep sign
+  abs = fmapRep abs
+
+instance (ExpField a) => Normed (Array r a) a where
+  size r = sqrt $ foldr (+) zero $ (** (one + one)) <$> r
+
+instance (SingI r, Epsilon a) => Epsilon (Array r a) where
+  nearZero f = and (fmapRep nearZero f)
+  aboutEqual a b = and (liftR2 aboutEqual a b)
+
+instance (SingI r, ExpField a) => Metric (Array r a) a where
+  distance a b = size (a - b)
+
+instance (SingI r, Integral a) => Integral (Array r a) where
+  divMod a b = (d, m)
+    where
+      x = liftR2 divMod a b
+      d = fmap fst x
+      m = fmap snd x
+
+-- | inner product
+-- >>> let v = [1,2,3] :: Array '[3] Int
+-- >>> v <.> v
+-- 14
+instance (CRing a, Num a, Semiring a, SingI r) => Hilbert (Array r) a where
+    a <.> b = sum $ liftR2 (*) a b
