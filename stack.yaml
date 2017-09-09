@@ -1,7 +1,7 @@
-resolver: lts-9.0
+resolver: lts-9.3
 
 packages:
-- '.'
+  - '.'
 
 extra-deps:
   - numhask-0.1.2

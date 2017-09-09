@@ -33,56 +33,25 @@ library
     src
   exposed-modules:
     NumHask.Array
-    NumHask.Array.Slicer
     NumHask.Array.Constraints
     NumHask.Array.Example
   other-modules:
 
   build-depends:
     base >= 4.7 && < 5,
-    protolude,
-    numhask >= 0.1.2,
-    QuickCheck,
-    vector,
-    singletons,
-    adjunctions,
-    distributive,
-    ghc-typelits-natnormalise,
-    typelits-witnesses
+    numhask >= 0.1.2 && < 0.2,
+    adjunctions >= 4.0 && < 5,
+    distributive >= 0.4 && < 0.6,
+    ghc-typelits-natnormalise >= 0.4 && < 0.6,
+    protolude >= 0.1 && < 0.3,
+    singletons >= 2.0 && < 3,
+    typelits-witnesses >= 0.2 && < 0.3,
+    vector >= 0.10 && < 0.13
   default-extensions:
-    NoImplicitPrelude,
-    UnicodeSyntax,
-    BangPatterns,
-    BinaryLiterals,
-    DeriveFoldable,
-    DeriveFunctor,
-    DeriveGeneric,
-    DeriveTraversable,
-    DisambiguateRecordFields,
-    EmptyCase,
-    FlexibleContexts,
-    FlexibleInstances,
-    FunctionalDependencies,
-    GADTSyntax,
-    InstanceSigs,
-    KindSignatures,
-    LambdaCase,
-    MonadComprehensions,
-    MultiParamTypeClasses,
-    MultiWayIf,
     NegativeLiterals,
+    NoImplicitPrelude,
     OverloadedStrings,
-    ParallelListComp,
-    PartialTypeSignatures,
-    PatternSynonyms,
-    RankNTypes,
-    RecordWildCards,
-    RecursiveDo,
-    ScopedTypeVariables,
-    TupleSections,
-    -- TypeApplications,
-    TypeFamilies,
-    TypeOperators
+    UnicodeSyntax
 
 test-suite test
   default-language:
@@ -95,46 +64,13 @@ test-suite test
     test.hs
   build-depends:
     base >= 4.7 && < 5,
-    tasty,
-    tasty-quickcheck,
     doctest,
-    protolude,
-    numhask,
-    numhask-array
+    numhask >= 0.1.2 && < 0.2
   default-extensions:
-    NoImplicitPrelude,
-    UnicodeSyntax,
-    BangPatterns,
-    BinaryLiterals,
-    DeriveFoldable,
-    DeriveFunctor,
-    DeriveGeneric,
-    DeriveTraversable,
-    DisambiguateRecordFields,
-    EmptyCase,
-    FlexibleContexts,
-    FlexibleInstances,
-    FunctionalDependencies,
-    GADTSyntax,
-    InstanceSigs,
-    KindSignatures,
-    LambdaCase,
-    MonadComprehensions,
-    MultiParamTypeClasses,
-    MultiWayIf,
     NegativeLiterals,
+    NoImplicitPrelude,
     OverloadedStrings,
-    ParallelListComp,
-    PartialTypeSignatures,
-    PatternSynonyms,
-    RankNTypes,
-    RecordWildCards,
-    RecursiveDo,
-    ScopedTypeVariables,
-    TupleSections,
-    TypeApplications,
-    TypeFamilies,
-    TypeOperators
+    UnicodeSyntax
 
 source-repository head
   type:

@@ -1,0 +1,21 @@
+# Weeder configuration file
+# https://github.com/ndmitchell/weeder
+##########################
+
+- package:
+  - name: numhask-array
+  - section:
+    - name: library
+    - message:
+      - name: Redundant build-depends entry
+      - depends: ghc-typelits-natnormalise
+    - message:
+      - name: Unused import
+      - module:
+        - name: NumHask.Array.Example
+        - identifier: NumHask.Array
+  - section:
+    - name: test:test
+    - message:
+      - name: Redundant build-depends entry
+      - depends: base
