@@ -209,13 +209,13 @@ mmult x y = tabulate (\[i, j] -> unsafeRow i x <.> unsafeCol j y)
 
 -- | extract the row of a matrix
 row ::
-     forall i a m n. (KnownNat m, KnownNat n, KnownNat i, (i :< m) ~ 'True)
-  => Proxy i
+     forall i a m n. (KnownNat m, KnownNat n, SingI i, (i :< m) ~ 'True)
+  => Sing i
   -> Array '[ m, n] a
   -> Array '[ n] a
 row i_ = unsafeRow i
   where
-    i = (fromIntegral . fromSing . singByProxy) i_
+    i = (fromIntegral . fromSing) i_
 
 unsafeRow ::
      forall a m n. (KnownNat m, KnownNat n)
@@ -228,8 +228,8 @@ unsafeRow i t@(Array a) = Array $ V.unsafeSlice (i * n) n a
 
 -- | extract the column of a matrix
 col ::
-     forall j a m n. (KnownNat m, KnownNat n, KnownNat j, (j :< n) ~ 'True)
-  => Proxy j
+     forall j a m n. (KnownNat m, KnownNat n, SingI j, (j :< n) ~ 'True)
+  => Sing j
   -> Array '[ m, n] a
   -> Array '[ m] a
 col j_ = unsafeCol j
@@ -275,17 +275,17 @@ type instance Apply (AllLTSym1 l) n = All ((:>$$) n) l
 
 -- |
 --
--- >>> slice (Proxy :: Proxy '[ '[0,1],'[2],'[1,2]]) a
+-- >>> slice [[0,1],[2],[1,2]] a
 -- [[[10, 11]],
 --  [[22, 23]]]
 slice ::
      forall s r a. (SingI s, SingI r, And (ZipWith AllLTSym0 s r) ~ 'True)
-  => Proxy s
+  => Sing s
   -> Array r a
   -> Array (Slice s) a
 slice s_ = unsafeSlice s
   where
-    s = ((fmap . fmap) fromInteger . fromSing . singByProxy) s_
+    s = ((fmap . fmap) fromInteger . fromSing) s_
 
 -- Chunks a vector v into a list of modules whose dimension is each i
 chunkItUp :: [V.Vector a] -> Int -> V.Vector a -> [V.Vector a]
@@ -300,7 +300,7 @@ zipWith fn (Array a) (Array b) = Array $ V.zipWith fn a b
 
 -- |
 --
--- >>> foldAlong (Proxy :: Proxy 1) (\_ -> ([0..3] :: Array '[4] Int)) a
+-- >>> foldAlong 1 (\_ -> ([0..3] :: Array '[4] Int)) a
 -- [[0, 1, 2, 3],
 --  [0, 1, 2, 3]]
 foldAlong ::
@@ -311,7 +311,7 @@ foldAlong ::
      , w ~ (Drop 1 vw)
      , vw ~ (TailModule s uvw)
      )
-  => Proxy s
+  => Sing s
   -> (Array vw a -> Array w a)
   -> Array uvw a
   -> Array uw a
@@ -325,12 +325,12 @@ foldAlong s_ f a@(Array v) =
        []
        md)
   where
-    s = (fromInteger . fromSing . singByProxy) s_
+    s = (fromInteger . fromSing) s_
     md = chunkItUp [] (product $ drop s $ shape a) v
 
 -- |
 --
--- >>> mapAlong (Proxy :: Proxy 0) (\x -> NumHask.Array.zipWith (*) x x) a
+-- >>> mapAlong 0 (\x -> NumHask.Array.zipWith (*) x x) a
 -- [[[1, 4, 9, 16],
 --   [25, 36, 49, 64],
 --   [81, 100, 121, 144]],
@@ -339,7 +339,7 @@ foldAlong s_ f a@(Array v) =
 --   [441, 484, 529, 576]]]
 mapAlong ::
      forall s uvw vw a. (SingI s, SingI uvw, vw ~ (HeadModule s uvw))
-  => Proxy s
+  => Sing s
   -> (Array vw a -> Array vw a)
   -> Array uvw a
   -> Array uvw a
@@ -353,12 +353,12 @@ mapAlong s_ f a@(Array v) =
        []
        md)
   where
-    s = (fromInteger . fromSing . singByProxy) s_
+    s = (fromInteger . fromSing) s_
     md = chunkItUp [] (product $ drop s $ shape a) v
 
 -- |
 --
--- >>> concatenate (Proxy :: Proxy 2) a a
+-- >>> concatenate 2 a a
 -- [[[1, 2, 3, 4, 1, 2, 3, 4],
 --   [5, 6, 7, 8, 5, 6, 7, 8],
 --   [9, 10, 11, 12, 9, 10, 11, 12]],
@@ -367,14 +367,14 @@ mapAlong s_ f a@(Array v) =
 --   [21, 22, 23, 24, 21, 22, 23, 24]]]
 concatenate ::
      forall s r t a. (SingI s, SingI r, SingI t, (IsValidConcat s t r) ~ 'True)
-  => Proxy s
+  => Sing s
   -> Array r a
   -> Array t a
   -> Array (Concatenate s t r) a
 concatenate s_ r@(Array vr) t@(Array vt) =
   Array . V.concat $ (concat . reverse . P.transpose) [rm, tm]
   where
-    s = (fromInteger . fromSing . singByProxy) s_
+    s = (fromInteger . fromSing) s_
     rm = chunkItUp [] (product $ drop s $ shape t) vt
     tm = chunkItUp [] (product $ drop s $ shape r) vr
 
