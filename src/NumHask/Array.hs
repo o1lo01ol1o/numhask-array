@@ -48,6 +48,7 @@ import NumHask.Array.Constraints
 import NumHask.Prelude hiding (All, Map, (><), mmult, show, row, col, zipWith, transpose)
 import qualified Data.Vector as V
 import qualified NumHask.Prelude as P
+import Data.Kind
 
 -- $setup
 -- >>> :set -XDataKinds

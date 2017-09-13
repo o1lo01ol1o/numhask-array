@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -39,7 +40,9 @@ import Data.Singletons.Prelude.Tuple (Fst, Snd)
 import Data.Singletons.TH (promote)
 import Data.Singletons.TypeLits (Nat)
 import qualified Protolude as P
+import GHC.Err (error)
 
+#if ( __GLASGOW_HASKELL__ < 801 )
 instance P.Eq Nat where
   x == y = P.not (x P./= y)
   x /= y = P.not (x P.== y)
@@ -49,9 +52,10 @@ instance P.Ord Nat where
   x < y = P.not (x P./= y) P.&& P.not (x P.> y)
   x <= y = (x P.== y) P.|| P.not (x P.> y)
   x >= y = (x P.== y) P.|| P.not (x P.< y)
+#endif
 
 (!!) :: [a] -> Nat -> a
-[] !! _ = P.error "Data.Singletons.List.!!: index too large"
+[] !! _ = error "Data.Singletons.List.!!: index too large"
 (x:xs) !! n =
   if n P.== 0
     then x

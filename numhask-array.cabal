@@ -22,6 +22,9 @@ build-type:
   Simple
 cabal-version:
   >=1.14
+tested-with:
+  GHC == 8.0.1,
+  GHC == 8.2.1
 extra-source-files:
   readme.md
   stack.yaml
