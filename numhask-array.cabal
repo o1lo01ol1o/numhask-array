@@ -37,6 +37,7 @@ library
   exposed-modules:
     NumHask.Array
     NumHask.Array.Constraints
+    NumHask.Array.Slicer 
     NumHask.Array.Example
   other-modules:
 
