@@ -44,6 +44,7 @@ library
     base >= 4.7 && < 5,
     numhask >= 0.1.2 && < 0.2,
     adjunctions >= 4.0 && < 5,
+    deepseq >= 1.4.2.0 && < 2,
     distributive >= 0.4 && < 0.6,
     ghc-typelits-natnormalise >= 0.4 && < 0.6,
     protolude >= 0.1 && < 0.3,

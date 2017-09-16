@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -23,8 +24,12 @@ module NumHask.Array
   , SomeArray(..)
   , row
   , col
+  , unsafeRow
+  , unsafeCol
   , slice
+  , unsafeSlice
   , index
+  , unsafeIndex
   , foldAlong
   , mapAlong
   , concatenate
@@ -44,6 +49,8 @@ import Data.Singletons.Prelude
 import Data.Singletons.TypeLits
 import GHC.Exts
 import GHC.Show
+import GHC.Generics (Generic1)
+-- import Control.DeepSeq (NFData1)
 import NumHask.Array.Constraints
 import NumHask.Prelude hiding (All, Map, (><), mmult, show, row, col, zipWith, transpose)
 import qualified Data.Vector as V
@@ -67,7 +74,7 @@ import Data.Kind
 --  [[13, 14, 15, 16],
 --   [17, 18, 19, 20],
 --   [21, 22, 23, 24]]]
-newtype Array (r :: [Nat]) a = Array (V.Vector a) deriving (Functor, Eq, Foldable)
+newtype Array (r :: [Nat]) a = Array (V.Vector a) deriving (Functor, Eq, Foldable, Generic, Generic1, NFData)
 
 -- | an n-dimensional array where shape is specified at the value level
 data SomeArray a =
@@ -104,7 +111,7 @@ unind ns x =
     ([], x)
     ns
 
-instance forall r. (SingI r) => Distributive (Array (r :: [Nat])) where
+instance forall r. (SingI r) => Distributive (Array r) where
   distribute f =
     Array $ V.generate n $ \i -> fmap (\(Array v) -> V.unsafeIndex v i) f
     where
@@ -167,6 +174,9 @@ flatten1 (SomeArray rep v) =
 
 instance (Show a, SingI r) => Show (Array (r :: [Nat]) a) where
   show = show . someArray
+
+-- instance NFData (Array (r :: [Nat]) a) where
+    -- nrf (Array v) = Array (nrf v)
 
 -- ** Operations
 -- | outer product
@@ -304,6 +314,10 @@ zipWith fn (Array a) (Array b) = Array $ V.zipWith fn a b
 -- >>> foldAlong (Proxy :: Proxy 1) (\_ -> ([0..3] :: Array '[4] Int)) a
 -- [[0, 1, 2, 3],
 --  [0, 1, 2, 3]]
+--
+-- todo: resolution of a primitive and a scalar eg
+--        Expected type: Array '[10] Int -> Array '[] Int
+--        Actual type: Array '[10] (Array '[] Int) -> Array '[] Int
 foldAlong ::
      forall s vw uvw uw w a.
      ( SingI s

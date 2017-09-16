@@ -5,4 +5,5 @@ packages:
 
 extra-deps:
   - numhask-0.1.2
+  # - deepseq-1.4.3.0
 
