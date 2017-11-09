@@ -1,8 +1,13 @@
-resolver: lts-9.3
+
+flags:
+  llvm-hs:
+    shared-llvm: true
 
 packages:
-  - '.'
-
+- '.'
 extra-deps:
-  - numhask-0.1.2
-
+- accelerate-llvm-1.0.0.0
+- llvm-hs-4.0.1.0
+- llvm-hs-pure-4.0.0.0
+- numhask-0.1.2
+resolver: lts-9.3
