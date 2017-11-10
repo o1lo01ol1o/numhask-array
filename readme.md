@@ -82,4 +82,8 @@ Right "[[[9, 10]],\n [[21, 22]]]"
 Magic has happened.  Despite types being utterly erased at run-time, slicer sneakily embeds unsafeSlice deep into GHC's unconcious, then enters ghc at the exact moment of erasure, does a lot of continuation passing style running about, and then emerges with the goods before run-time sees what's going on. Most intruigingly, the array is correctly typed but neither the user nor ghc can ever known what that type was.
 
 
+Accelerate
+---
+
+PKG_CONFIG_PATH=/usr/local/opt/libFFI/lib/pkgconfig stack build --ghc-options -freverse-errors
 
