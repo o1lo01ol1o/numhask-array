@@ -32,11 +32,11 @@ library
     src
   exposed-modules:
     NumHask.Array
+    NumHask.ArrayAcc
     NumHask.Array.Constraints
     NumHask.Array.Slicer
     NumHask.Array.Example
   other-modules:
-    NumHask.ArrayAcc
     Paths_numhask_array
   build-depends:
     base >=4.7 && <5,
