@@ -23,8 +23,8 @@ dependencies:
 library:
   source-dirs: src
   exposed-modules:
+  - NumHask.Accelerate
   - NumHask.Array
-  - NumHask.ArrayAcc
   - NumHask.Array.Constraints
   - NumHask.Array.Slicer
   - NumHask.Array.Example
