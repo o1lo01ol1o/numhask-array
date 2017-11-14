@@ -1,9 +1,9 @@
-resolver: lts-9.3
+resolver: nightly-2017-11-07
 
 packages:
   - '.'
 
-extra-deps:
-  - numhask-0.1.2
+extra-deps: []
+  # - numhask-0.1.2
   # - deepseq-1.4.3.0
 
