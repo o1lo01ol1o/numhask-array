@@ -19,6 +19,7 @@ import Data.Singletons.TypeLits
 import GHC.Exts
 import GHC.Show
 import NumHask.Prelude hiding (All, Map)
+import NumHask.Shape
 import qualified Data.Array.Accelerate as A
 
 type family NatsToShape (ns :: [Nat]) where

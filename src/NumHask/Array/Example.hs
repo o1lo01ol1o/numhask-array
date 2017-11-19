@@ -40,6 +40,7 @@ module NumHask.Array.Example
   ) where
 
 import NumHask.Array as A
+import NumHask.Shape
 import NumHask.Prelude as P
 
 -- $setup
@@ -163,7 +164,7 @@ import NumHask.Prelude as P
 -- >>> -- todo: resolve potential to polymorph number literals eg b**2
 -- >>> b ** (one+one)
 -- [0.0, 1.0, 4.0, 9.000000000000002]
--- >>> 10 *. sin <$> a
+-- >>> 10 *. (sin <$> a)
 -- [9.129452507276277, -9.880316240928618, 7.451131604793488, -2.6237485370392877]
 -- >>> (<35) <$> a
 -- [True, True, False, False]
