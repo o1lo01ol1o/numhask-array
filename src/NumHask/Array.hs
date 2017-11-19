@@ -22,6 +22,8 @@
 module NumHask.Array
   ( Array(..)
   , SomeArray(..)
+  , Vector
+  , Matrix
   , row
   , col
   , unsafeRow
@@ -52,10 +54,12 @@ import GHC.Show
 import GHC.Generics (Generic1)
 -- import Control.DeepSeq (NFData1)
 import NumHask.Array.Constraints
-import NumHask.Prelude hiding (All, Map, (><), mmult, show, row, col, zipWith, transpose)
+import NumHask.Shape
+import NumHask.Prelude hiding (All, Map, (><), show, zipWith, transpose)
 import qualified Data.Vector as V
 import qualified NumHask.Prelude as P
 import Data.Kind
+import qualified Test.QuickCheck as QC
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -177,6 +181,24 @@ instance (Show a, SingI r) => Show (Array (r :: [Nat]) a) where
 
 -- instance NFData (Array (r :: [Nat]) a) where
     -- nrf (Array v) = Array (nrf v)
+
+
+type Vector n = Array '[n]
+
+type Matrix m n = Array '[m,n]
+
+instance (KnownNat n, QC.Arbitrary a, AdditiveUnital a, Num a) =>
+         QC.Arbitrary (Vector n a) where
+  arbitrary = QC.frequency [(1, P.pure zero), (9, fromList <$> QC.vector n)]
+    where
+      n = P.fromInteger $ natVal (Proxy :: Proxy n)
+
+instance (KnownNat m, KnownNat n, QC.Arbitrary a, AdditiveUnital a, Num a) =>
+         QC.Arbitrary (Matrix m n a) where
+  arbitrary = QC.frequency [(1, P.pure zero), (9, fromList <$> QC.vector (m * n))]
+    where
+      n = P.fromInteger $ natVal (Proxy :: Proxy n)
+      m = P.fromInteger $ natVal (Proxy :: Proxy m)
 
 -- ** Operations
 -- | outer product
@@ -536,5 +558,36 @@ instance (SingI r, Integral a) => Integral (Array r a) where
       d = fmap fst x
       m = fmap snd x
 
-instance (CRing a, Num a, Semiring a, SingI r) => Hilbert (Array r) a where
+instance (CRing a, Semiring a, SingI r) => Hilbert (Array r) a where
   a <.> b = sum $ liftR2 (*) a b
+
+instance (SingI r, Additive a) => AdditiveBasis (Array r) a where
+    (.+.) = liftR2 (+)
+instance (SingI r, AdditiveGroup a) => AdditiveGroupBasis (Array r) a where
+    (.-.) = liftR2 (-)
+instance (SingI r, Multiplicative a) => MultiplicativeBasis (Array r) a where
+    (.*.) = liftR2 (*)
+instance (SingI r, MultiplicativeGroup a) => MultiplicativeGroupBasis (Array r) a where
+    (./.) = liftR2 (/)
+
+instance (SingI r, Additive a) => AdditiveModule (Array r) a where
+    (.+) r s = fmap (s+) r
+    (+.) s = fmap (s+)
+instance (SingI r, AdditiveGroup a) => AdditiveGroupModule (Array r) a where
+    (.-) r s = fmap (\x -> x - s) r
+    (-.) s = fmap (\x -> x - s)
+instance (SingI r, Multiplicative a) => MultiplicativeModule (Array r) a where
+    (.*) r s = fmap (s*) r
+    (*.) s = fmap (s*)
+instance (SingI r, MultiplicativeGroup a) => MultiplicativeGroupModule (Array r) a where
+    (./) r s = fmap (/ s) r
+    (/.) s = fmap (/ s)
+
+instance (SingI r) => Singleton (Array r) where
+    singleton = pureRep
+
+instance (SingI r, CRing a, Multiplicative a) => TensorProduct (Array r a) where
+  (><) m n = tabulate (\i -> index m i *. n)
+  timesleft v m = tabulate (\i -> v <.> index m i)
+  timesright m v = tabulate (\i -> v <.> index m i)
+
