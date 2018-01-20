@@ -18,10 +18,6 @@ main = do
   doctest ["src/NumHask/Array.hs"]
   putStrLn ("Example DocTest" :: Text)
   doctest ["src/NumHask/Array/Example.hs"]
-  putStrLn ("Slicer DocTest" :: Text)
-  doctest ["src/NumHask/Array/Slicer.hs"]
-  putStrLn ("ArrayAcc DocTest" :: Text)
-  doctest ["src/NumHask/Accelerate.hs"]
   defaultMain tests
 
 tests :: TestTree
@@ -37,57 +33,57 @@ tests =
 testsVInt :: TestTree
 testsVInt =
   testGroup
-    "Vector 6 Int"
-    [ testGroup "Additive" $ testLawOf ([] :: [Vector 6 Int]) <$> additiveLaws
+    "Vector [] 6 Int"
+    [ testGroup "Additive" $ testLawOf ([] :: [Vector [] 6 Int]) <$> additiveLaws
     , testGroup "Additive Group" $
-      testLawOf ([] :: [Vector 6 Int]) <$> additiveGroupLaws
+      testLawOf ([] :: [Vector [] 6 Int]) <$> additiveGroupLaws
     , testGroup "Multiplicative" $
-      testLawOf ([] :: [Vector 6 Int]) <$> multiplicativeLaws
+      testLawOf ([] :: [Vector [] 6 Int]) <$> multiplicativeLaws
     , testGroup "Distribution" $
-      testLawOf ([] :: [Vector 6 Int]) <$> distributionLaws
+      testLawOf ([] :: [Vector [] 6 Int]) <$> distributionLaws
     , testGroup "Additive Module" $
-      testLawOf2 ([] :: [(Vector 6 Int, Int)]) <$> additiveModuleLaws
+      testLawOf2 ([] :: [(Vector [] 6 Int, Int)]) <$> additiveModuleLaws
     , testGroup "Additive Group Module" $
-      testLawOf2 ([] :: [(Vector 6 Int, Int)]) <$> additiveGroupModuleLaws
+      testLawOf2 ([] :: [(Vector [] 6 Int, Int)]) <$> additiveGroupModuleLaws
     , testGroup "Multiplicative Module" $
-      testLawOf2 ([] :: [(Vector 6 Int, Int)]) <$> multiplicativeModuleLaws
+      testLawOf2 ([] :: [(Vector [] 6 Int, Int)]) <$> multiplicativeModuleLaws
     , testGroup "Hilbert" $
-      testLawOf2 ([] :: [(Vector 6 Int, Int)]) <$> hilbertLaws
+      testLawOf2 ([] :: [(Vector [] 6 Int, Int)]) <$> hilbertLaws
     , testGroup "Tensor product" $
-      testLawOf2 ([] :: [(Vector 6 Int, Int)]) <$> tensorProductLaws
+      testLawOf2 ([] :: [(Vector [] 6 Int, Int)]) <$> tensorProductLaws
     , testGroup "Additive Basis" $
-      testLawOf ([] :: [Vector 6 Int]) <$> additiveBasisLaws
+      testLawOf ([] :: [Vector [] 6 Int]) <$> additiveBasisLaws
     , testGroup "Additive Group Basis" $
-      testLawOf ([] :: [Vector 6 Int]) <$> additiveGroupBasisLaws
+      testLawOf ([] :: [Vector [] 6 Int]) <$> additiveGroupBasisLaws
     , testGroup "Multiplicative Basis" $
-      testLawOf ([] :: [Vector 6 Int]) <$> multiplicativeBasisLaws
+      testLawOf ([] :: [Vector [] 6 Int]) <$> multiplicativeBasisLaws
     ]
 
 testsMInt :: TestTree
 testsMInt =
   testGroup
-    "Matrix 4 3 Int"
-    [ testGroup "Additive" $ testLawOf ([] :: [Matrix 4 3 Int]) <$> additiveLaws
+    "Matrix [] 4 3 Int"
+    [ testGroup "Additive" $ testLawOf ([] :: [Matrix [] 4 3 Int]) <$> additiveLaws
     , testGroup "Additive Group" $
-      testLawOf ([] :: [Matrix 4 3 Int]) <$> additiveGroupLaws
-    , testGroup "Multiplicative" $
-      testLawOf ([] :: [Matrix 3 3 Int]) <$> multiplicativeMonoidalLaws
+      testLawOf ([] :: [Matrix [] 4 3 Int]) <$> additiveGroupLaws
+    , testGroup "Multiplicative (square only)" $
+      testLawOf ([] :: [Matrix [] 3 3 Int]) <$> multiplicativeMonoidalLaws
     , testGroup "Additive Module" $
-      testLawOf2 ([] :: [(Matrix 4 3 Int, Int)]) <$> additiveModuleLaws
+      testLawOf2 ([] :: [(Matrix [] 4 3 Int, Int)]) <$> additiveModuleLaws
     , testGroup "Additive Group Module" $
-      testLawOf2 ([] :: [(Matrix 4 3 Int, Int)]) <$> additiveGroupModuleLaws
+      testLawOf2 ([] :: [(Matrix [] 4 3 Int, Int)]) <$> additiveGroupModuleLaws
     , testGroup "Multiplicative Module" $
-      testLawOf2 ([] :: [(Matrix 4 3 Int, Int)]) <$> multiplicativeModuleLaws
+      testLawOf2 ([] :: [(Matrix [] 4 3 Int, Int)]) <$> multiplicativeModuleLaws
     , testGroup "Hilbert" $
-      testLawOf2 ([] :: [(Matrix 4 3 Int, Int)]) <$> hilbertLaws
+      testLawOf2 ([] :: [(Matrix [] 4 3 Int, Int)]) <$> hilbertLaws
     , testGroup "Tensor product" $
-      testLawOf2 ([] :: [(Matrix 4 3 Int, Int)]) <$> tensorProductLaws
+      testLawOf2 ([] :: [(Matrix [] 4 3 Int, Int)]) <$> tensorProductLaws
     , testGroup "Additive Basis" $
-      testLawOf ([] :: [Matrix 4 3 Int]) <$> additiveBasisLaws
+      testLawOf ([] :: [Matrix [] 4 3 Int]) <$> additiveBasisLaws
     , testGroup "Additive Group Basis" $
-      testLawOf ([] :: [Matrix 4 3 Int]) <$> additiveGroupBasisLaws
+      testLawOf ([] :: [Matrix [] 4 3 Int]) <$> additiveGroupBasisLaws
     , testGroup "Multiplicative Basis" $
-      testLawOf ([] :: [Matrix 4 3 Int]) <$> multiplicativeBasisLaws
+      testLawOf ([] :: [Matrix [] 4 3 Int]) <$> multiplicativeBasisLaws
     ]
 
 testsVFloat :: TestTree
@@ -95,28 +91,28 @@ testsVFloat =
   testGroup
     "Vector 6 Float"
     [ testGroup "MultiplicativeGroup" $
-      testLawOf ([] :: [Vector 6 Float]) <$> multiplicativeGroupLaws
-    , testGroup "Signed" $ testLawOf ([] :: [Vector 6 Float]) <$> signedLaws
+      testLawOf ([] :: [Vector [] 6 Float]) <$> multiplicativeGroupLaws
+    , testGroup "Signed" $ testLawOf ([] :: [Vector [] 6 Float]) <$> signedLaws
     , testGroup "Metric" $
-      testLawOf ([] :: [Vector 6 Float]) <$> metricNaperianFloatLaws
+      testLawOf ([] :: [Vector [] 6 Float]) <$> metricNaperianFloatLaws
     , testGroup "Exponential Field" $
-      testLawOf ([] :: [Vector 6 Float]) <$> expFieldNaperianLaws
+      testLawOf ([] :: [Vector [] 6 Float]) <$> expFieldNaperianLaws
     , testGroup "Multiplicative Group Module" $
       localOption (QuickCheckTests 1000) .
-      testLawOf2 ([] :: [(Vector 6 Float, Float)]) <$>
+      testLawOf2 ([] :: [(Vector [] 6 Float, Float)]) <$>
       multiplicativeGroupModuleLawsFail
     , testGroup "Multiplicative Group Basis" $
-      testLawOf ([] :: [Vector 6 Float]) <$> multiplicativeGroupBasisLaws
+      testLawOf ([] :: [Vector [] 6 Float]) <$> multiplicativeGroupBasisLaws
     ]
 
 testsMFloat :: TestTree
 testsMFloat =
   testGroup
-    "Matrix 4 3 Float"
+    "Matrix [] 4 3 Float"
     [ testGroup "Multiplicative Group Module" $
       localOption (QuickCheckTests 1000) .
-      testLawOf2 ([] :: [(Matrix 4 3 Float, Float)]) <$>
+      testLawOf2 ([] :: [(Matrix [] 4 3 Float, Float)]) <$>
       multiplicativeGroupModuleLawsFail
     , testGroup "Multiplicative Group Basis" $
-      testLawOf ([] :: [Matrix 4 3 Float]) <$> multiplicativeGroupBasisLaws
+      testLawOf ([] :: [Matrix [] 4 3 Float]) <$> multiplicativeGroupBasisLaws
     ]
