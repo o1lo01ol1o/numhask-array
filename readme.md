@@ -15,9 +15,20 @@ See [Examples](src/NumHask/Array/Example.hs) for the emergent API.
 Workflow
 ---
 
-pkg_config hack courtesy of accelerate
+```
+stack build --test --ghc-options -freverse-errors
+```
+
+To try out in ghci:
 
 ```
-PKG_CONFIG_PATH=/usr/local/opt/libFFI/lib/pkgconfig stack build --ghc-options -freverse-errors
+stack ghci
+> :set -XDataKinds
+> :set -XOverloadedLists
+> import NumHask.Prelude
+> let a = [0..5] :: Array [] '[2,3] Int
+> a + a
+[[0, 2, 4],
+ [6, 8, 10]]
 ```
 
