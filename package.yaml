@@ -1,5 +1,5 @@
 name: numhask-array
-version: '0.1.0'
+version: '0.1.0.0'
 synopsis: See readme.md
 description: See readme.md for description.
 category: project
@@ -8,7 +8,7 @@ maintainer: tonyday567@gmail.com
 copyright: Tony Day
 license: BSD3
 github: tonyday567/numhask-array
-tested-with: GHC==8.0.1 GHC==8.2.1
+tested-with: GHC==8.0.1 GHC==8.2.1 GHC==8.2.2
 extra-source-files:
 - readme.md
 - stack.yaml
@@ -27,7 +27,6 @@ library:
   - NumHask.Accelerate
   - NumHask.Array
   - NumHask.Array.Constraints
-  - NumHask.Array.Slicer
   - NumHask.Array.Example
   - NumHask.Shape
   dependencies:
@@ -36,6 +35,7 @@ library:
   - accelerate-llvm-native
   - adjunctions >=4.0 && <5
   - deepseq >=1.4.2.0 && <2
+  - dimensions
   - distributive >=0.4 && <0.6
   - ghc-typelits-natnormalise >=0.4 && <0.6
   - protolude >=0.1 && <0.3
