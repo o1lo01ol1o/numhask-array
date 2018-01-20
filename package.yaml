@@ -24,15 +24,11 @@ dependencies:
 library:
   source-dirs: src
   exposed-modules:
-  - NumHask.Accelerate
   - NumHask.Array
   - NumHask.Array.Constraints
   - NumHask.Array.Example
   - NumHask.Shape
   dependencies:
-  - accelerate
-  - accelerate-llvm
-  - accelerate-llvm-native
   - adjunctions >=4.0 && <5
   - deepseq >=1.4.2.0 && <2
   - dimensions

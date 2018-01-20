@@ -18,8 +18,6 @@ main = do
   doctest ["src/NumHask/Array.hs"]
   putStrLn ("Example DocTest" :: Text)
   doctest ["src/NumHask/Array/Example.hs"]
-  putStrLn ("ArrayAcc DocTest" :: Text)
-  doctest ["src/NumHask/Accelerate.hs"]
   defaultMain tests
 
 tests :: TestTree
