@@ -21,7 +21,7 @@
 -- and doctest as well
 {-# LANGUAGE DatatypeContexts #-}
 
-module NumHask.Array where
+module NumHask.Array (module NumHask.Array) where
 
 import Data.Distributive
 import Data.Functor.Rep
