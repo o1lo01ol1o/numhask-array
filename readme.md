@@ -5,13 +5,30 @@ numhask-array
 
 An experimental array with:
 
-- shape specified at the type level in n-dimensions
-- a [vector](https://www.stackage.org/package/vector) backend
+- a polymorphic container
+- shape specified at the type level
 - Representable instances
 - [numhask](https://www.stackage.org/package/numhask) heirarchy instances
 
 See [Examples](src/NumHask/Array/Example.hs) for the emergent API.
 
+Workflow
+---
 
+```
+stack build --test --ghc-options -freverse-errors
+```
 
+To try out in ghci:
+
+```
+stack ghci
+> :set -XDataKinds
+> :set -XOverloadedLists
+> import NumHask.Prelude
+> let a = [0..5] :: Array [] '[2,3] Int
+> a + a
+[[0, 2, 4],
+ [6, 8, 10]]
+```
 
